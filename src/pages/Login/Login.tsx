@@ -39,6 +39,9 @@ function Login({ setIsAuthenticated }: LoginProps) {
     } else if (email === "manager@eoffice.com" && password === "manager123") {
       setIsAuthenticated(true);
       navigate("/manager"); // Navigate to /dashboard for regular users
+    } else if (email === "employee@eoffice.com" && password === "employee123") {
+      setIsAuthenticated(true);
+      navigate("/employee");
     } else {
       alert("Invalid email or password");
     }

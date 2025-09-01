@@ -6,19 +6,22 @@ import {
   LogOut,
   Menu,
   Building2,
-  Bell,
-  User,
-  Activity,
-  BarChart3,
-  CheckCircle2,
   ChevronDown,
   Calendar,
-  FileText,
   TrendingUp,
   MoreHorizontal,
-  CreditCard,
-  Shield,
-  HelpCircle,
+  Search,
+  Filter,
+  Plus,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  Eye,
+  Edit,
+  Trash2,
+  Download,
+  Upload,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
@@ -35,13 +38,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../components/ui/dropDownMenu";
-import { Badge } from "../../components/ui/badge";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "../../components/ui/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,19 +70,124 @@ function AdminDashboard() {
   const navigationItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Documents", href: "/admin/documents", icon: FileText },
-    { name: "Billing", href: "/admin/billing", icon: CreditCard },
-    { name: "Security", href: "/admin/security", icon: Shield },
     { name: "Settings", href: "/admin/settings", icon: Settings },
-    { name: "Help", href: "/admin/help", icon: HelpCircle },
   ];
 
-  // Recent activity data
-  const recentActivities = [
-    { user: "John Doe", action: "created a new document", time: "2 mins ago" },
-    { user: "Sarah Smith", action: "updated profile", time: "15 mins ago" },
-    { user: "Mike Johnson", action: "uploaded files", time: "1 hour ago" },
-    { user: "Emma Wilson", action: "changed permissions", time: "3 hours ago" },
+  // User designation data for chart
+  const designationData = [
+    { name: "Developers", value: 35, color: "#3b82f6" },
+    { name: "UI/UX Designers", value: 15, color: "#8b5cf6" },
+    { name: "Project Managers", value: 10, color: "#10b981" },
+    { name: "QA Engineers", value: 12, color: "#f59e0b" },
+    { name: "DevOps", value: 8, color: "#ef4444" },
+    { name: "Business Analysts", value: 7, color: "#6366f1" },
+    { name: "Others", value: 13, color: "#64748b" },
+  ];
+
+  // Recent registrations data
+  const recentRegistrations = [
+    {
+      name: "Alex Johnson",
+      email: "alex@example.com",
+      role: "Developer",
+      date: "2023-10-15",
+      status: "Active",
+    },
+    {
+      name: "Maria Garcia",
+      email: "maria@example.com",
+      role: "UI Designer",
+      date: "2023-10-14",
+      status: "Active",
+    },
+    {
+      name: "James Wilson",
+      email: "james@example.com",
+      role: "Project Manager",
+      date: "2023-10-13",
+      status: "Pending",
+    },
+    {
+      name: "Sarah Chen",
+      email: "sarah@example.com",
+      role: "QA Engineer",
+      date: "2023-10-12",
+      status: "Active",
+    },
+    {
+      name: "Michael Brown",
+      email: "michael@example.com",
+      role: "Developer",
+      date: "2023-10-11",
+      status: "Suspended",
+    },
+  ];
+
+  // User table data
+  const usersData = [
+    {
+      id: 1,
+      name: "Alex Johnson",
+      email: "alex@example.com",
+      designation: "Senior Developer",
+      department: "Engineering",
+      status: "Active",
+      lastActive: "2 hours ago",
+    },
+    {
+      id: 2,
+      name: "Maria Garcia",
+      email: "maria@example.com",
+      designation: "UI/UX Designer",
+      department: "Design",
+      status: "Active",
+      lastActive: "5 hours ago",
+    },
+    {
+      id: 3,
+      name: "James Wilson",
+      email: "james@example.com",
+      designation: "Project Manager",
+      department: "Management",
+      status: "Active",
+      lastActive: "Yesterday",
+    },
+    {
+      id: 4,
+      name: "Sarah Chen",
+      email: "sarah@example.com",
+      designation: "QA Engineer",
+      department: "Quality Assurance",
+      status: "Active",
+      lastActive: "Today",
+    },
+    {
+      id: 5,
+      name: "Michael Brown",
+      email: "michael@example.com",
+      designation: "Junior Developer",
+      department: "Engineering",
+      status: "Inactive",
+      lastActive: "3 days ago",
+    },
+    {
+      id: 6,
+      name: "Emily Davis",
+      email: "emily@example.com",
+      designation: "Product Designer",
+      department: "Design",
+      status: "Active",
+      lastActive: "12 hours ago",
+    },
+    {
+      id: 7,
+      name: "David Kim",
+      email: "david@example.com",
+      designation: "DevOps Engineer",
+      department: "Operations",
+      status: "Active",
+      lastActive: "Today",
+    },
   ];
 
   return (
@@ -168,7 +289,15 @@ function AdminDashboard() {
 
           {/* Breadcrumb */}
           <div className="flex-1">
-            <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {location.pathname === "/admin"
+                ? "Dashboard"
+                : location.pathname === "/admin/users"
+                ? "User Management"
+                : location.pathname === "/admin/settings"
+                ? "Settings"
+                : "Admin Portal"}
+            </h1>
           </div>
 
           {/* Actions */}
@@ -183,8 +312,6 @@ function AdminDashboard() {
                 })}
               </span>
             </div>
-
-          
 
             {/* User dropdown */}
             <DropdownMenu>
@@ -215,7 +342,7 @@ function AdminDashboard() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-               
+
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
@@ -236,7 +363,7 @@ function AdminDashboard() {
           {location.pathname === "/admin" ? (
             <div className="space-y-6 animate-fadeIn">
               {/* Stats grid */}
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
                 <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -261,136 +388,266 @@ function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Active Sessions
-                        </p>
-                        <h3 className="text-2xl font-bold mt-1 text-gray-900">
-                          89
-                        </h3>
-                        <div className="flex items-center mt-2">
-                          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                          <span className="text-xs text-green-500 font-medium">
-                            +5% from yesterday
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <Activity className="h-6 w-6 text-green-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                
 
                 <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">
-                          Documents
+                          Departments
                         </p>
                         <h3 className="text-2xl font-bold mt-1 text-gray-900">
-                          5,678
-                        </h3>
-                        <div className="flex items-center mt-2">
-                          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                          <span className="text-xs text-green-500 font-medium">
-                            +23% this week
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                        <FileText className="h-6 w-6 text-amber-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          System Status
-                        </p>
-                        <h3 className="text-2xl font-bold mt-1 text-green-600">
-                          Online
+                          12
                         </h3>
                         <p className="text-xs text-gray-500 mt-2">
-                          99.9% uptime this month
+                          5 new this year
                         </p>
                       </div>
-                      <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                        <Building2 className="h-6 w-6 text-purple-600" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+
+              
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                {/* Analytics Chart */}
-                <Card className="md:col-span-4 border-0 shadow-md">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-semibold">
-                      Activity Overview
-                    </CardTitle>
-                    <Button variant="outline" size="sm" className="h-8 gap-1">
-                      <span>View Report</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
+              {/* Charts and additional content */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="border-0 shadow-md">
+                  <CardHeader>
+                    <CardTitle>Users by Designation</CardTitle>
+                    <CardDescription>
+                      Distribution of users across different roles
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-80 flex items-center justify-center rounded-lg bg-gray-100">
-                      <div className="text-center text-gray-500">
-                        <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>Activity chart visualization</p>
-                        <p className="text-sm">
-                          (Integrate with Chart.js or Recharts)
-                        </p>
-                      </div>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={designationData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            label={({ name, percent }) =>
+                              `${name}: ${(percent * 100).toFixed(0)}%`
+                            }
+                          >
+                            {designationData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Recent Activity */}
-                <Card className="md:col-span-3 border-0 shadow-md">
+                <Card className="border-0 shadow-md">
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Recent Activity</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </CardTitle>
+                    <CardTitle>Recent Registrations</CardTitle>
+                    <CardDescription>
+                      New users joined in the last 7 days
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid gap-4">
-                    {recentActivities.map((activity, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-4 pb-4 last:pb-0 border-b last:border-b-0"
-                      >
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <User className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            {activity.user}{" "}
-                            <span className="font-normal text-gray-600">
-                              {activity.action}
+                  <CardContent>
+                    <div className="space-y-4">
+                      {recentRegistrations.map((user, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-blue-100 text-blue-800">
+                                {user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">{user.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {user.role}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">{user.date}</p>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                user.status === "Active"
+                                  ? "bg-green-100 text-green-800"
+                                  : user.status === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {user.status}
                             </span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {activity.time}
-                          </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          ) : location.pathname === "/admin/users" ? (
+            <div className="space-y-6">
+              <Card className="border-0 shadow-md">
+                <CardHeader>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <CardTitle>User Management</CardTitle>
+                      <CardDescription>
+                        Manage all system users and their permissions
+                      </CardDescription>
+                    </div>
+                    <Button className="mt-4 md:mt-0">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New User
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <input
+                        type="search"
+                        placeholder="Search users..."
+                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <Button variant="outline" className="gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filter
+                    </Button>
+                    <Button variant="outline" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">
+                              User
+                            </th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">
+                              Designation
+                            </th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">
+                              Department
+                            </th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">
+                              Status
+                            </th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">
+                              Last Active
+                            </th>
+                            <th className="px-4 py-3 text-right font-medium text-gray-700">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {usersData.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-blue-100 text-blue-800">
+                                      {user.name
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium text-gray-900">
+                                      {user.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {user.email}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <Briefcase className="h-4 w-4 text-gray-400" />
+                                  <span>{user.designation}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {user.department}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    user.status === "Active"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {user.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-500">
+                                {user.lastActive}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="icon">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-gray-700">
+                      Showing <span className="font-medium">1</span> to{" "}
+                      <span className="font-medium">7</span> of{" "}
+                      <span className="font-medium">124</span> results
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled>
+                        Previous
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           ) : (
             <Outlet />

@@ -5,6 +5,7 @@ import Users from "./pages/Users/Users";
 import { useState } from "react";
 import Settings from "./components/Setting/Setting";
 import ManagerDashboard from "./pages/ManagerDashboard/ManagerDashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard/EmployeDashboard";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,6 +31,7 @@ function App() {
         />
       </Route>
       <Route path="/manager" element={<ManagerDashboard />} />
+      <Route path="/employee" element={<EmployeeDashboard />} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );
