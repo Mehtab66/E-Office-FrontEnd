@@ -8,8 +8,7 @@ import {
   FiChevronRight,
   FiEdit,
 } from "react-icons/fi";
-import AddEntityModal, { projectConfig } from "../AddEntity/AddEntityModal"; // Import AddEntityModal
-import { useNavigate } from "react-router-dom"; // For navigation to timesheet view
+import AddEntityModal, { projectConfig } from "../AddEntity/AddEntityModal";
 
 interface Project {
   id: string;
@@ -22,14 +21,36 @@ interface Project {
   teamMembers: string[];
 }
 
+interface TimeEntry {
+  id: string;
+  employee: string;
+  project: string;
+  date: string;
+  hours: number;
+  description: string;
+}
+
+interface Deliverable {
+  id: string;
+  date: string;
+  description: string;
+  notes: string;
+}
+
 interface ProjectsViewProps {
   projects: Project[];
-  onEditProject: (id: string, data: any) => void; // Callback to handle project edits
+  onEditProject: (id: string, data: any) => void;
+  timeEntries: TimeEntry[];
+  onAddDeliverable: (data: Deliverable) => void;
+  setActiveView: (view: string) => void;
 }
 
 const ProjectsView: React.FC<ProjectsViewProps> = ({
   projects,
   onEditProject,
+  timeEntries,
+  onAddDeliverable,
+  setActiveView,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -39,7 +60,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const itemsPerPage = 10;
-  const navigate = useNavigate();
 
   // Filter projects based on search term
   const filteredProjects = useMemo(() => {
@@ -114,6 +134,17 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
   const handleSaveEdit = (data: any) => {
     onEditProject(editingProject!.id, data);
     setEditingProject(null);
+  };
+
+  // Handle timesheet navigation with validation
+  const handleTimesheetNavigation = (project: Project) => {
+    console.log("Setting active view for timesheet:", project.id, project.name); // Debug log
+    if (!project || !project.id || !project.name) {
+      console.error("Invalid project data:", project);
+      alert("Error: Invalid project data");
+      return;
+    }
+    setActiveView(`timesheet-${project.id}`);
   };
 
   return (
@@ -196,9 +227,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                       <FiEdit /> Edit
                     </button>
                     <button
-                      onClick={() =>
-                        navigate(`/project/${project.id}/timesheet`)
-                      }
+                      onClick={() => handleTimesheetNavigation(project)}
                       className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-1"
                     >
                       Timesheet

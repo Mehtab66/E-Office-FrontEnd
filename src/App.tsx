@@ -1,13 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login/Login";
-import AdminDashboard from "./pages/AdminDashboard/AdminDashboard";
-import Users from "./pages/Users/Users";
-import { useState } from "react";
-import Settings from "./components/Setting/Setting";
 import ManagerDashboard from "./pages/ManagerDashboard/ManagerDashboard";
+import { useState } from "react";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("authToken") // Persist auth state
+  );
+
+  console.log("App: isAuthenticated =", isAuthenticated); // Debug log
 
   return (
     <Routes>
@@ -16,20 +17,11 @@ function App() {
         element={<Login setIsAuthenticated={setIsAuthenticated} />}
       />
       <Route
-        path="/admin"
+        path="/manager"
         element={
-          isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />
+          isAuthenticated ? <ManagerDashboard /> : <Navigate to="/login" />
         }
-      >
-        <Route path="users" element={<Users />} />
-        <Route path="settings" element={<Settings />} />
-
-        <Route
-          index
-          element={<div className="p-4">Welcome to Admin Dashboard</div>}
-        />
-      </Route>
-      <Route path="/manager" element={<ManagerDashboard />} />
+      />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );
