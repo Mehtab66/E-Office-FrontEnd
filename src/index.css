@@ -175,7 +175,6 @@
   gap: 12px;
   background: none;
   border: none;
-  color: var(--muted-foreground);
   text-align: left;
   cursor: pointer;
   transition: all 0.3s ease;

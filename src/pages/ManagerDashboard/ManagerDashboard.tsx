@@ -14,7 +14,11 @@ import {
   FiMenu,
   FiX,
 } from "react-icons/fi";
-
+import AddEntityModal, {
+  clientConfig,
+  projectConfig,
+} from "../../components/AddEntity/AddEntityModal";
+import "../../App.css";
 // Type definitions
 interface Project {
   id: string;
@@ -61,8 +65,8 @@ const ManagerDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState<
-    "project" | "client" | "employee" | null
+  const [modalConfig, setModalConfig] = useState<
+    typeof projectConfig | typeof clientConfig | null
   >(null);
 
   // Sample data
@@ -161,10 +165,69 @@ const ManagerDashboard: React.FC = () => {
     { id: "settings", label: "Settings", icon: <FiSettings /> },
   ];
 
-  // Open add modal
-  const openAddModal = (type: "project" | "client" | "employee") => {
-    setModalType(type);
+  // Open add modal with specific configuration
+  const openAddModal = (type: "project" | "client") => {
+    setModalConfig(type === "project" ? projectConfig : clientConfig);
     setShowAddModal(true);
+  };
+
+  // Handle form submission
+  const handleAddSubmit = (data: any) => {
+    if (modalConfig?.type === "project") {
+      setProjects((prev) => [
+        ...prev,
+        {
+          ...data,
+          id: String(prev.length + 1),
+          teamMembers: data.teamMembers.split(", ").filter(Boolean),
+        },
+      ]);
+    } else if (modalConfig?.type === "client") {
+      setClients((prev) => [
+        ...prev,
+        {
+          ...data,
+          id: String(prev.length + 1),
+          projects: [],
+        },
+      ]);
+    }
+    setShowAddModal(false);
+    setModalConfig(null);
+  };
+
+  // Update modal configs with dynamic clients and employees
+  const updatedProjectConfig = {
+    ...projectConfig,
+    fields: projectConfig.fields.map((field: any) =>
+      field.name === "client"
+        ? {
+            ...field,
+            options: clients.map((client) => client.name),
+            label: field.label ?? "Client",
+            type: field.type ?? "select",
+          }
+        : field.name === "teamLead" || field.name === "teamMembers"
+        ? {
+            ...field,
+            options: employees.map((employee) => employee.name),
+            label:
+              field.label ??
+              (field.name === "teamLead" ? "Team Lead" : "Team Members"),
+            type: field.type ?? "select",
+          }
+        : {
+            ...field,
+            label: field.label ?? field.name,
+            type: field.type ?? "text",
+          }
+    ),
+    onSubmit: handleAddSubmit,
+  };
+
+  const updatedClientConfig = {
+    ...clientConfig,
+    onSubmit: handleAddSubmit,
   };
 
   // Render main content based on active view
@@ -269,8 +332,18 @@ const ManagerDashboard: React.FC = () => {
       </div>
 
       {/* Add Modal */}
-      {showAddModal && (
-        <AddModal type={modalType} onClose={() => setShowAddModal(false)} />
+      {showAddModal && modalConfig && (
+        <AddEntityModal
+          config={
+            modalConfig.type === "project"
+              ? updatedProjectConfig
+              : updatedClientConfig
+          }
+          onClose={() => {
+            setShowAddModal(false);
+            setModalConfig(null);
+          }}
+        />
       )}
     </div>
   );
@@ -453,49 +526,5 @@ const TimesheetsView: React.FC<{ timeEntries: TimeEntry[] }> = ({
     {/* Timesheets table/view implementation */}
   </div>
 );
-
-// Add Modal Component
-interface AddModalProps {
-  type: "project" | "client" | "employee" | null;
-  onClose: () => void;
-}
-
-const AddModal: React.FC<AddModalProps> = ({ type, onClose }) => {
-  const [formData, setFormData] = useState({});
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission based on type
-    onClose();
-  };
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <div className="modal-header">
-          <h2>Add New {type}</h2>
-          <button className="modal-close" onClick={onClose}>
-            <FiX />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <form onSubmit={handleSubmit}>
-            {/* Form fields would be rendered based on the type */}
-            <div className="form-actions">
-              <button type="button" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary">
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 export default ManagerDashboard;

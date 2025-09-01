@@ -534,5 +534,4 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({
     </div>
   );
 };
-
 export default AddEntityModal;
