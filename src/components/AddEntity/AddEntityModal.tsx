@@ -30,6 +30,7 @@ interface EntityConfig {
   title: string;
   fields: FormField[];
   onSubmit: (data: any) => void;
+  initialData?: any;
 }
 
 interface AddEntityModalProps {
@@ -213,7 +214,9 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({
 
   // Handle country change
   const handleCountryChange = (country: string) => {
-    const selectedCountry = countries.find((c: { name: string; }    ) => c.name === country);
+    const selectedCountry = countries.find(
+      (c: { name: string }) => c.name === country
+    );
     if (selectedCountry) {
       setFormData((prev) => ({
         ...prev,

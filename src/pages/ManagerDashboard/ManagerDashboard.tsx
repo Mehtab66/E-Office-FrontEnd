@@ -14,13 +14,13 @@ import {
   FiMenu,
   FiX,
 } from "react-icons/fi";
-import AddEntityModal, {
-  clientConfig,
-  projectConfig,
-} from "../../components/AddEntity/AddEntityModal";
+import AddEntityModal from "../../components/AddEntity/AddEntityModal";
 import "../../App.css";
 import ProjectTimesheetView from "../../components/ProjectTimeSheetView/ProjectTimeSheet";
 import ProjectsView from "../../components/Projects/Projects";
+import ClientsView from "../../components/clients/Clients";
+import EmployeesView from "../../components/employees/Employee";
+import Settings from "../../components/Setting/Setting";
 
 // Type definitions
 interface Project {
@@ -70,6 +70,134 @@ interface Deliverable {
   description: string;
   notes: string;
 }
+
+interface EntityConfig {
+  type: "client" | "project" | "employee";
+  title: string;
+  fields: any[];
+  onSubmit: (data: any) => void;
+  initialData?: any;
+}
+
+// Define configs with explicit types to match EntityConfig
+const projectConfig: EntityConfig = {
+  type: "project",
+  title: "Project",
+  fields: [
+    {
+      name: "name",
+      label: "Project Name",
+      type: "text",
+      placeholder: "Enter project name",
+      required: true,
+    },
+    {
+      name: "client",
+      label: "Client",
+      type: "select",
+      placeholder: "Select client",
+      options: [],
+      required: true,
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      placeholder: "Select status",
+      options: ["active", "pending", "completed"],
+      required: true,
+    },
+    {
+      name: "startDate",
+      label: "Start Date",
+      type: "date",
+      placeholder: "Select start date",
+      required: true,
+    },
+    {
+      name: "estimatedTime",
+      label: "Estimated Time",
+      type: "text",
+      placeholder: "e.g., 3 months",
+      required: true,
+    },
+    {
+      name: "teamLead",
+      label: "Team Lead",
+      type: "select",
+      placeholder: "Select team lead",
+      options: [],
+      required: true,
+    },
+    {
+      name: "teamMembers",
+      label: "Team Members",
+      type: "select",
+      placeholder: "Select team members",
+      options: [],
+      required: false,
+    },
+  ],
+  onSubmit: () => {}, // Will be overridden
+};
+
+const clientConfig: EntityConfig = {
+  type: "client",
+  title: "Client",
+  fields: [
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      placeholder: "Enter client name",
+      required: true,
+    },
+    {
+      name: "email",
+      label: "Email",
+      type: "email",
+      placeholder: "Enter email",
+      required: true,
+    },
+    {
+      name: "phone",
+      label: "Phone",
+      type: "text",
+      placeholder: "Enter phone number",
+      required: true,
+    },
+    {
+      name: "country",
+      label: "Country",
+      type: "text",
+      placeholder: "Enter country",
+      required: true,
+    },
+    {
+      name: "billingAddress",
+      label: "Billing Address",
+      type: "text",
+      placeholder: "Enter billing address",
+      required: true,
+    },
+    {
+      name: "shippingAddress",
+      label: "Shipping Address",
+      type: "text",
+      placeholder: "Enter shipping address",
+      required: true,
+    },
+    {
+      name: "currency",
+      label: "Currency",
+      type: "select",
+      placeholder: "Select currency",
+      options: ["USD", "CAD", "EUR"],
+      required: true,
+    },
+  ],
+  onSubmit: () => {}, // Will be overridden
+};
 
 // Dashboard View Component
 interface DashboardViewProps {
@@ -226,111 +354,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   );
 };
 
-// Other view components (simplified for brevity)
-const ClientsView: React.FC<{ clients: Client[] }> = ({ clients }) => (
-  <div className="view-container">
-    <h1>Clients</h1>
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-foreground">
-        <thead className="bg-muted">
-          <tr>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Name
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Email
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Phone
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Projects
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.length > 0 ? (
-            clients.map((client) => (
-              <tr
-                key={client.id}
-                className="border-b border-border hover:bg-muted/50"
-              >
-                <td className="px-4 py-3">{client.name}</td>
-                <td className="px-4 py-3">{client.email}</td>
-                <td className="px-4 py-3">{client.phone}</td>
-                <td className="px-4 py-3">
-                  {client.projects.join(", ") || "None"}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={4}
-                className="px-4 py-3 text-center text-muted-foreground"
-              >
-                No clients found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-const EmployeesView: React.FC<{ employees: Employee[] }> = ({ employees }) => (
-  <div className="view-container">
-    <h1>Employees</h1>
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-foreground">
-        <thead className="bg-muted">
-          <tr>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Name
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Role
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Email
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Projects
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.length > 0 ? (
-            employees.map((employee) => (
-              <tr
-                key={employee.id}
-                className="border-b border-border hover:bg-muted/50"
-              >
-                <td className="px-4 py-3">{employee.name}</td>
-                <td className="px-4 py-3">{employee.role}</td>
-                <td className="px-4 py-3">{employee.email}</td>
-                <td className="px-4 py-3">
-                  {employee.projects.join(", ") || "None"}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={4}
-                className="px-4 py-3 text-center text-muted-foreground"
-              >
-                No employees found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
+// Timesheets View Component
 const TimesheetsView: React.FC<{ timeEntries: TimeEntry[] }> = ({
   timeEntries,
 }) => (
@@ -392,9 +416,7 @@ const ManagerDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState<
-    typeof projectConfig | typeof clientConfig | null
-  >(null);
+  const [modalConfig, setModalConfig] = useState<EntityConfig | null>(null);
 
   // Sample data
   const [projects, setProjects] = useState<Project[]>([
@@ -509,39 +531,145 @@ const ManagerDashboard: React.FC = () => {
     { id: "projects", label: "Projects", icon: <FiBriefcase /> },
     { id: "clients", label: "Clients", icon: <FiUsers /> },
     { id: "employees", label: "Employees", icon: <FiUser /> },
-    { id: "timesheets", label: "Timesheets", icon: <FiClock /> },
-    { id: "reports", label: "Reports", icon: <FiBarChart2 /> },
+    // { id: "timesheets", label: "Timesheets", icon: <FiClock /> },
+    // { id: "reports", label: "Reports", icon: <FiBarChart2 /> },
     { id: "settings", label: "Settings", icon: <FiSettings /> },
   ];
 
-  // Open add modal with specific configuration
-  const openAddModal = (type: "project" | "client") => {
-    setModalConfig(type === "project" ? projectConfig : clientConfig);
+  // Employee configuration for modal
+  const employeeConfig: EntityConfig = {
+    type: "employee",
+    title: "Employee",
+    fields: [
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        placeholder: "Enter name",
+        required: true,
+      },
+      {
+        name: "role",
+        label: "Role",
+        type: "text",
+        placeholder: "Enter role",
+        required: true,
+      },
+      {
+        name: "email",
+        label: "Email",
+        type: "email",
+        placeholder: "Enter email",
+        required: true,
+      },
+      {
+        name: "projects",
+        label: "Projects",
+        type: "select",
+        placeholder: "Select projects",
+        options: projects.map((project) => project.name),
+        required: false,
+      },
+    ],
+    onSubmit: (data) => {
+      if (data.id) {
+        // Update existing employee
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.id === data.id
+              ? {
+                  ...emp,
+                  ...data,
+                  projects: data.projects ? [data.projects] : emp.projects,
+                }
+              : emp
+          )
+        );
+      } else {
+        // Add new employee
+        setEmployees((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: String(prev.length + 1),
+            projects: data.projects ? [data.projects] : [],
+          },
+        ]);
+      }
+    },
+  };
+
+  // Open add/edit modal with specific configuration
+  const openAddModal = (
+    type: "project" | "client" | "employee",
+    initialData?: any
+  ) => {
+    setModalConfig(
+      type === "project"
+        ? { ...updatedProjectConfig, initialData }
+        : type === "client"
+        ? { ...updatedClientConfig, initialData }
+        : { ...updatedEmployeeConfig, initialData }
+    );
     setShowAddModal(true);
   };
 
   // Handle form submission
   const handleAddSubmit = (data: any) => {
     if (modalConfig?.type === "project") {
-      setProjects((prev) => [
-        ...prev,
-        {
-          ...data,
-          id: String(prev.length + 1),
-          teamMembers: Array.isArray(data.teamMembers)
-            ? data.teamMembers
-            : data.teamMembers.split(", ").filter(Boolean),
-        },
-      ]);
+      if (data.id) {
+        // Update existing project
+        setProjects((prev) =>
+          prev.map((project) =>
+            project.id === data.id
+              ? {
+                  ...project,
+                  ...data,
+                  teamMembers: Array.isArray(data.teamMembers)
+                    ? data.teamMembers
+                    : data.teamMembers
+                    ? data.teamMembers.split(", ").filter(Boolean)
+                    : project.teamMembers,
+                }
+              : project
+          )
+        );
+      } else {
+        // Add new project
+        setProjects((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: String(prev.length + 1),
+            teamMembers: Array.isArray(data.teamMembers)
+              ? data.teamMembers
+              : data.teamMembers.split(", ").filter(Boolean),
+          },
+        ]);
+      }
     } else if (modalConfig?.type === "client") {
-      setClients((prev) => [
-        ...prev,
-        {
-          ...data,
-          id: String(prev.length + 1),
-          projects: [],
-        },
-      ]);
+      if (data.id) {
+        // Update existing client
+        setClients((prev) =>
+          prev.map((client) =>
+            client.id === data.id
+              ? { ...client, ...data, projects: client.projects }
+              : client
+          )
+        );
+      } else {
+        // Add new client
+        setClients((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: String(prev.length + 1),
+            projects: [],
+          },
+        ]);
+      }
+    } else if (modalConfig?.type === "employee") {
+      employeeConfig.onSubmit(data);
     }
     setShowAddModal(false);
     setModalConfig(null);
@@ -549,21 +677,17 @@ const ManagerDashboard: React.FC = () => {
 
   // Handle project edit
   const handleEditProject = (id: string, data: any) => {
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === id
-          ? {
-              ...project,
-              ...data,
-              teamMembers: Array.isArray(data.teamMembers)
-                ? data.teamMembers
-                : data.teamMembers
-                ? data.teamMembers.split(", ").filter(Boolean)
-                : project.teamMembers,
-            }
-          : project
-      )
-    );
+    openAddModal("project", { ...data, id });
+  };
+
+  // Handle client edit
+  const handleEditClient = (client: Client) => {
+    openAddModal("client", client);
+  };
+
+  // Handle employee edit
+  const handleEditEmployee = (employee: Employee) => {
+    openAddModal("employee", employee);
   };
 
   // Handle add deliverable
@@ -572,36 +696,39 @@ const ManagerDashboard: React.FC = () => {
   };
 
   // Update modal configs with dynamic clients and employees
-  const updatedProjectConfig = {
+  const updatedProjectConfig: EntityConfig = {
     ...projectConfig,
     fields: projectConfig.fields.map((field: any) =>
       field.name === "client"
         ? {
             ...field,
             options: clients.map((client) => client.name),
-            label: field.label ?? "Client",
-            type: field.type ?? "select",
           }
         : field.name === "teamLead" || field.name === "teamMembers"
         ? {
             ...field,
             options: employees.map((employee) => employee.name),
-            label:
-              field.label ??
-              (field.name === "teamLead" ? "Team Lead" : "Team Members"),
-            type: field.type ?? "select",
           }
-        : {
-            ...field,
-            label: field.label ?? field.name,
-            type: field.type ?? "text",
-          }
+        : field
     ),
     onSubmit: handleAddSubmit,
   };
 
-  const updatedClientConfig = {
+  const updatedClientConfig: EntityConfig = {
     ...clientConfig,
+    onSubmit: handleAddSubmit,
+  };
+
+  const updatedEmployeeConfig: EntityConfig = {
+    ...employeeConfig,
+    fields: employeeConfig.fields.map((field: any) =>
+      field.name === "projects"
+        ? {
+            ...field,
+            options: projects.map((project) => project.name),
+          }
+        : field
+    ),
     onSubmit: handleAddSubmit,
   };
 
@@ -630,7 +757,6 @@ const ManagerDashboard: React.FC = () => {
           project={{ id: project.id, name: project.name }}
           timeEntries={timeEntries}
           onAddDeliverable={handleAddDeliverable}
-          // setActiveView={setActiveView}
         />
       );
     }
@@ -660,11 +786,20 @@ const ManagerDashboard: React.FC = () => {
           />
         );
       case "clients":
-        return <ClientsView clients={clients} />;
+        return (
+          <ClientsView clients={clients} onEditClient={handleEditClient} />
+        );
       case "employees":
-        return <EmployeesView employees={employees} />;
+        return (
+          <EmployeesView
+            employees={employees}
+            onEditEmployee={handleEditEmployee}
+          />
+        );
       case "timesheets":
         return <TimesheetsView timeEntries={timeEntries} />;
+      case "settings":
+        return <Settings />;
       default:
         return (
           <DashboardView
@@ -749,11 +884,7 @@ const ManagerDashboard: React.FC = () => {
       {/* Add Modal */}
       {showAddModal && modalConfig && (
         <AddEntityModal
-          config={
-            modalConfig.type === "project"
-              ? updatedProjectConfig
-              : updatedClientConfig
-          }
+          config={modalConfig}
           onClose={() => {
             setShowAddModal(false);
             setModalConfig(null);
