@@ -111,7 +111,7 @@ const projectConfig: EntityConfig = {
       name: "startDate",
       label: "Start Date",
       type: "date",
-      placeholder: "Select start date",
+      placeholder: "YYYY-MM-DD",
       required: true,
     },
     {
@@ -132,9 +132,8 @@ const projectConfig: EntityConfig = {
     {
       name: "teamMembers",
       label: "Team Members",
-      type: "select",
-      placeholder: "Select team members",
-      options: [],
+      type: "text",
+      placeholder: "Type to add team members",
       required: false,
     },
   ],
@@ -625,9 +624,7 @@ const ManagerDashboard: React.FC = () => {
               ? {
                   ...project,
                   ...data,
-                  teamMembers: Array.isArray(data.teamMembers)
-                    ? data.teamMembers
-                    : data.teamMembers
+                  teamMembers: data.teamMembers
                     ? data.teamMembers.split(", ").filter(Boolean)
                     : project.teamMembers,
                 }
@@ -641,9 +638,9 @@ const ManagerDashboard: React.FC = () => {
           {
             ...data,
             id: String(prev.length + 1),
-            teamMembers: Array.isArray(data.teamMembers)
-              ? data.teamMembers
-              : data.teamMembers.split(", ").filter(Boolean),
+            teamMembers: data.teamMembers
+              ? data.teamMembers.split(", ").filter(Boolean)
+              : [],
           },
         ]);
       }
@@ -677,7 +674,10 @@ const ManagerDashboard: React.FC = () => {
 
   // Handle project edit
   const handleEditProject = (id: string, data: any) => {
-    openAddModal("project", { ...data, id });
+    openAddModal("project", {
+      ...data,
+      teamMembers: data.teamMembers.join(", "),
+    });
   };
 
   // Handle client edit
@@ -704,7 +704,7 @@ const ManagerDashboard: React.FC = () => {
             ...field,
             options: clients.map((client) => client.name),
           }
-        : field.name === "teamLead" || field.name === "teamMembers"
+        : field.name === "teamLead"
         ? {
             ...field,
             options: employees.map((employee) => employee.name),
