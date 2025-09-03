@@ -568,18 +568,12 @@ export default function Users() {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-gray-200 transition-colors"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                              
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleEditUser(user)}
-                                className="hover:bg-gray-200 transition-colors"
+                                className=" transition-colors"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -587,7 +581,7 @@ export default function Users() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setDeleteUserId(user._id)}
-                                className="hover:bg-red-100 text-red-600 transition-colors"
+                                className="hover:bg-red-600 text-red-500 transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
