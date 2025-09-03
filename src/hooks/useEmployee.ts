@@ -3,13 +3,14 @@ import {
   getEmployees,
   createUser,
   updateUser,
+  getDashboardStats,
   deleteUser,
   type User,
 } from "../apis/employeeService";
 import { toast } from "react-toastify";
 
 // ✅ Fetch employees
-export const useEmployees = (
+export const useEmployees = (p0: { page: number; limit: number; sort: string; }
   
 ) => {
   return useQuery<User[], Error>({
@@ -60,6 +61,13 @@ export const useDeleteUser = () => {
     onError: (error: Error) => {
       toast.error(`Failed to delete user: ${error.message}`);
     },
+  });
+};
+
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ["dashboardStats"],
+    queryFn: getDashboardStats,
   });
 };
 export type { User };

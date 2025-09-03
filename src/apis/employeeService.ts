@@ -1,6 +1,8 @@
 import apiClient from "./apiClient";
 
 export interface User {
+  status: string;
+  createdAt: string | number | Date;
   department: string;
   _id: string;
   name: string;
@@ -56,5 +58,19 @@ export const deleteUser = async (id: string): Promise<{ message: string }> => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Failed to delete user");
+  }
+};
+
+// Fetch dashboard statistics
+export const getDashboardStats = async () => {
+  try {
+    const response = await apiClient.get("/admin/GetDashboardStats");
+    return response.data; // Returns { totalUsers, designations, totalDepartments }
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      // @ts-ignore
+      throw new Error(error.response?.data?.message || "Failed to fetch dashboard stats");
+    }
+    throw new Error("Failed to fetch dashboard stats");
   }
 };

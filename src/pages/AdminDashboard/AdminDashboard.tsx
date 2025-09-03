@@ -8,7 +8,6 @@ import {
   Building2,
   ChevronDown,
   Calendar,
-  TrendingUp,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
@@ -33,10 +32,29 @@ import {
   CardDescription,
 } from "../../components/ui/card";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useEmployees, useDashboardStats } from "../../hooks/useEmployee"; // Import both hooks
 
 function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+
+  // Fetch dashboard stats
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useDashboardStats();
+
+  // Fetch recent registrations (top 5, sorted by createdAt descending)
+  const {
+    data: recentData,
+    isLoading: recentLoading,
+    error: recentError,
+  } = useEmployees({
+    page: 1,
+    limit: 5,
+    sort: "-createdAt",
+  });
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -48,55 +66,31 @@ function AdminDashboard() {
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
-  // User designation data for chart
-  const designationData = [
-    { name: "Developers", value: 35, color: "#3b82f6" },
-    { name: "UI/UX Designers", value: 15, color: "#8b5cf6" },
-    { name: "Project Managers", value: 10, color: "#10b981" },
-    { name: "QA Engineers", value: 12, color: "#f59e0b" },
-    { name: "DevOps", value: 8, color: "#ef4444" },
-    { name: "Business Analysts", value: 7, color: "#6366f1" },
-    { name: "Others", value: 13, color: "#64748b" },
-  ];
+  // Designation data for pie chart
+  const designationData =
+    statsData?.designations?.map((entry: any, index: number) => ({
+      ...entry,
+      color: [
+        "#3b82f6",
+        "#8b5cf6",
+        "#10b981",
+        "#f59e0b",
+        "#ef4444",
+        "#6366f1",
+        "#64748b",
+      ][index % 7], // Assign colors
+    })) || [];
 
-  // Recent registrations data
-  const recentRegistrations = [
-    {
-      name: "Alex Johnson",
-      email: "alex@example.com",
-      role: "Developer",
-      date: "2023-10-15",
-      status: "Active",
-    },
-    {
-      name: "Maria Garcia",
-      email: "maria@example.com",
-      role: "UI Designer",
-      date: "2023-10-14",
-      status: "Active",
-    },
-    {
-      name: "James Wilson",
-      email: "james@example.com",
-      role: "Project Manager",
-      date: "2023-10-13",
-      status: "Pending",
-    },
-    {
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      role: "QA Engineer",
-      date: "2023-10-12",
-      status: "Active",
-    },
-    {
-      name: "Michael Brown",
-      email: "michael@example.com",
-      role: "Developer",
-      date: "2023-10-11",
-      status: "Suspended",
-    },
-  ];
+  // Recent registrations
+  const recentRegistrations =
+    recentData?.
+    map((user) => ({
+      name: user.name,
+      email: user.email,
+      role: user.designation || "Unknown",
+      date: new Date(user.createdAt).toISOString().split("T")[0],
+      status: user.status || "Active", // Adjust based on actual status field
+    })) || [];
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -250,7 +244,6 @@ function AdminDashboard() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
@@ -267,143 +260,145 @@ function AdminDashboard() {
 
         {/* Page content */}
         <main className="flex-1 p-6 bg-gray-50">
-          {/* Show default dashboard only when at /admin exactly */}
           {location.pathname === "/admin" ? (
             <div className="space-y-6 animate-fadeIn">
-              {/* Stats grid */}
-              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-                <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Total Users
-                        </p>
-                        <h3 className="text-2xl font-bold mt-1 text-gray-900">
-                          1,234
-                        </h3>
-                        <div className="flex items-center mt-2">
-                          <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                          <span className="text-xs text-green-500 font-medium">
-                            +12% from last month
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Departments
-                        </p>
-                        <h3 className="text-2xl font-bold mt-1 text-gray-900">
-                          12
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-2">
-                          5 new this year
-                        </p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-purple-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Charts and additional content */}
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card className="border-0 shadow-md">
-                  <CardHeader>
-                    <CardTitle>Users by Designation</CardTitle>
-                    <CardDescription>
-                      Distribution of users across different roles
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={designationData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                            label={({ name, percent }) =>
-                              `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                            }
-                          >
-                            {designationData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-md">
-                  <CardHeader>
-                    <CardTitle>Recent Registrations</CardTitle>
-                    <CardDescription>
-                      New users joined in the last 7 days
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {recentRegistrations.map((user, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarFallback className="bg-blue-100 text-blue-800">
-                                {user.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">{user.name}</p>
-                              <p className="text-xs text-gray-500">
-                                {user.role}
-                              </p>
-                            </div>
+              {/* Loading and Error States */}
+              {(statsLoading || recentLoading) && (
+                <div className="text-center">Loading dashboard data...</div>
+              )}
+              {(statsError || recentError) && (
+                <div className="text-center text-red-500">
+                  Error: {statsError?.message || recentError?.message}
+                </div>
+              )}
+              {statsData && recentData && (
+                <>
+                  {/* Stats grid */}
+                  <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
+                    <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Total Users
+                            </p>
+                            <h3 className="text-2xl font-bold mt-1 text-gray-900">
+                              {statsData.totalUsers.toLocaleString()}
+                            </h3>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500">{user.date}</p>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                user.status === "Active"
-                                  ? "bg-green-100 text-green-800"
-                                  : user.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                          <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <Users className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Departments
+                            </p>
+                            <h3 className="text-2xl font-bold mt-1 text-gray-900">
+                              {statsData.totalDepartments}
+                            </h3>
+                          </div>
+                          <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <Building2 className="h-6 w-6 text-purple-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Charts and additional content */}
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Card className="border-0 shadow-md">
+                      <CardHeader>
+                        <CardTitle>Users by Designation</CardTitle>
+                        <CardDescription>
+                          Distribution of users across different roles
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={designationData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={80}
+                                paddingAngle={5}
+                                dataKey="value"
+                                label={({ name, percent }) =>
+                                  `${name}: ${((percent ?? 0) * 100).toFixed(
+                                    0
+                                  )}%`
+                                }
+                              >
+                                {designationData.map((entry: { color: string | undefined; }, index: any) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.color}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-md">
+                      <CardHeader>
+                        <CardTitle>Recent Registrations</CardTitle>
+                        <CardDescription>
+                          New users joined in the last 7 days
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {recentRegistrations.map((user, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
                             >
-                              {user.status}
-                            </span>
-                          </div>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9">
+                                  <AvatarFallback className="bg-blue-100 text-blue-800">
+                                    {user.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {user.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {user.role}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">
+                                  {user.date}
+                                </p>
+                               
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <Outlet />
