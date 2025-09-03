@@ -14,7 +14,6 @@ import {
   FiFileText,
   FiMessageSquare,
   FiCheck,
-  FiPlus,
   FiGlobe,
 } from "react-icons/fi";
 import { type Country, countries } from "../../libs/countries";
@@ -675,7 +674,7 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({
         </form>
       </div>
 
-      <style jsx>{`
+      <style >{`
         @keyframes fade-in {
           from {
             opacity: 0;

@@ -9,19 +9,6 @@ import {
   ChevronDown,
   Calendar,
   TrendingUp,
-  MoreHorizontal,
-  Search,
-  Filter,
-  Plus,
-  Mail,
-  Phone,
-  MapPin,
-  Briefcase,
-  Eye,
-  Edit,
-  Trash2,
-  Download,
-  Upload,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
@@ -45,19 +32,7 @@ import {
   CardTitle,
   CardDescription,
 } from "../../components/ui/card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -120,73 +95,6 @@ function AdminDashboard() {
       role: "Developer",
       date: "2023-10-11",
       status: "Suspended",
-    },
-  ];
-
-  // User table data
-  const usersData = [
-    {
-      id: 1,
-      name: "Alex Johnson",
-      email: "alex@example.com",
-      designation: "Senior Developer",
-      department: "Engineering",
-      status: "Active",
-      lastActive: "2 hours ago",
-    },
-    {
-      id: 2,
-      name: "Maria Garcia",
-      email: "maria@example.com",
-      designation: "UI/UX Designer",
-      department: "Design",
-      status: "Active",
-      lastActive: "5 hours ago",
-    },
-    {
-      id: 3,
-      name: "James Wilson",
-      email: "james@example.com",
-      designation: "Project Manager",
-      department: "Management",
-      status: "Active",
-      lastActive: "Yesterday",
-    },
-    {
-      id: 4,
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      designation: "QA Engineer",
-      department: "Quality Assurance",
-      status: "Active",
-      lastActive: "Today",
-    },
-    {
-      id: 5,
-      name: "Michael Brown",
-      email: "michael@example.com",
-      designation: "Junior Developer",
-      department: "Engineering",
-      status: "Inactive",
-      lastActive: "3 days ago",
-    },
-    {
-      id: 6,
-      name: "Emily Davis",
-      email: "emily@example.com",
-      designation: "Product Designer",
-      department: "Design",
-      status: "Active",
-      lastActive: "12 hours ago",
-    },
-    {
-      id: 7,
-      name: "David Kim",
-      email: "david@example.com",
-      designation: "DevOps Engineer",
-      department: "Operations",
-      status: "Active",
-      lastActive: "Today",
     },
   ];
 
@@ -388,8 +296,6 @@ function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                
-
                 <Card className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -410,8 +316,6 @@ function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-
-              
               </div>
 
               {/* Charts and additional content */}
@@ -436,7 +340,7 @@ function AdminDashboard() {
                             paddingAngle={5}
                             dataKey="value"
                             label={({ name, percent }) =>
-                              `${name}: ${(percent * 100).toFixed(0)}%`
+                              `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
                             }
                           >
                             {designationData.map((entry, index) => (
@@ -500,154 +404,6 @@ function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          ) : location.pathname === "/admin/users" ? (
-            <div className="space-y-6">
-              <Card className="border-0 shadow-md">
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <CardTitle>User Management</CardTitle>
-                      <CardDescription>
-                        Manage all system users and their permissions
-                      </CardDescription>
-                    </div>
-                    <Button className="mt-4 md:mt-0">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New User
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col md:flex-row gap-4 mb-6">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                      <input
-                        type="search"
-                        placeholder="Search users..."
-                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      Filter
-                    </Button>
-                    <Button variant="outline" className="gap-2">
-                      <Download className="h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
-
-                  <div className="rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left font-medium text-gray-700">
-                              User
-                            </th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-700">
-                              Designation
-                            </th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-700">
-                              Department
-                            </th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-700">
-                              Status
-                            </th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-700">
-                              Last Active
-                            </th>
-                            <th className="px-4 py-3 text-right font-medium text-gray-700">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {usersData.map((user) => (
-                            <tr key={user.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-blue-100 text-blue-800">
-                                      {user.name
-                                        .split(" ")
-                                        .map((n) => n[0])
-                                        .join("")}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="font-medium text-gray-900">
-                                      {user.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {user.email}
-                                    </p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Briefcase className="h-4 w-4 text-gray-400" />
-                                  <span>{user.designation}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {user.department}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    user.status === "Active"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  }`}
-                                >
-                                  {user.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-500">
-                                {user.lastActive}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="icon">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon">
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-gray-700">
-                      Showing <span className="font-medium">1</span> to{" "}
-                      <span className="font-medium">7</span> of{" "}
-                      <span className="font-medium">124</span> results
-                    </p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" disabled>
-                        Previous
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           ) : (
             <Outlet />

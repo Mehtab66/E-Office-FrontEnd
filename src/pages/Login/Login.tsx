@@ -1,5 +1,3 @@
-import type React from "react";
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
@@ -13,45 +11,39 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { useAuthLogin } from "../../hooks/useAuth";
 
-interface LoginProps {
-  setIsAuthenticated: (value: boolean) => void;
-}
-
-function Login({ setIsAuthenticated }: LoginProps) {
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutate: login, isPending } = useAuthLogin();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Validate specific credentials
-    if (email === "admin@eoffice.com" && password === "admin123") {
-      setIsAuthenticated(true);
-      navigate("/admin"); // Navigate to /admin instead of /dashboard
-    } else if (email === "manager@eoffice.com" && password === "manager123") {
-      setIsAuthenticated(true);
-      navigate("/manager"); // Navigate to /dashboard for regular users
-    } else if (email === "employee@eoffice.com" && password === "employee123") {
-      setIsAuthenticated(true);
-      navigate("/employee");
-    } else {
-      alert("Invalid email or password");
-    }
-
-    setIsLoading(false);
+    login(
+      { email, password },
+      {
+        onSuccess: (data) => {
+          console.log("Login successful:", data.user.designation);
+          switch (data.user.designation) {
+            case "Admin":
+              navigate("/admin");
+              break;
+            case "Manager":
+              navigate("/manager");
+              break;
+            default:
+              navigate("/employee");
+          }
+        },
+      }
+    );
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
 
@@ -120,9 +112,9 @@ function Login({ setIsAuthenticated }: LoginProps) {
             <Button
               type="submit"
               className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base transition-all duration-200 group"
-              disabled={isLoading}
+              disabled={isPending}
             >
-              {isLoading ? (
+              {isPending ? (
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   <span>Signing in...</span>

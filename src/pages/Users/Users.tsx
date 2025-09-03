@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -13,14 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
-import { Badge } from "../../components/ui/badge";
 import {
   Card,
   CardContent,
@@ -36,104 +28,35 @@ import {
   UsersIcon,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  Download,
+  Briefcase,
+  Eye,
 } from "lucide-react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../../libs/utils";
-import React from "react";
-
-// Table Component Definitions
-const tableVariants = cva("w-full border-collapse border", {
-  variants: {
-    density: {
-      default: "table-row",
-      compact: "table-row [&>tr>td]:py-2 [&>tr>th]:py-2",
-      comfortable: "table-row [&>tr>td]:py-4 [&>tr>th]:py-4",
-    },
-  },
-  defaultVariants: {
-    density: "default",
-  },
-});
-
-interface TableProps
-  extends React.HTMLAttributes<HTMLTableElement>,
-    VariantProps<typeof tableVariants> {}
-
-const Table = React.forwardRef<HTMLTableElement, TableProps>(
-  ({ className, density, ...props }, ref) => (
-    <table
-      ref={ref}
-      className={cn(tableVariants({ density, className }))}
-      {...props}
-    />
-  )
-);
-Table.displayName = "Table";
-
-const TableHeader = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("bg-muted/50", className)} {...props} />
-));
-TableHeader.displayName = "TableHeader";
-
-const TableBody = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tbody ref={ref} className={cn("", className)} {...props} />
-));
-TableBody.displayName = "TableBody";
-
-const TableRow = React.forwardRef<
-  HTMLTableRowElement,
-  React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
-  <tr ref={ref} className={cn("border-b", className)} {...props} />
-));
-TableRow.displayName = "TableRow";
-
-const TableHead = React.forwardRef<
-  HTMLTableCellElement,
-  React.HTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <th
-    ref={ref}
-    className={cn("border px-4 py-3 text-left font-medium", className)}
-    {...props}
-  />
-));
-TableHead.displayName = "TableHead";
-
-const TableCell = React.forwardRef<
-  HTMLTableCellElement,
-  React.HTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <td
-    ref={ref}
-    className={cn("border px-4 py-3 text-left", className)}
-    {...props}
-  />
-));
-TableCell.displayName = "TableCell";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  grade: string;
-  designation: string;
-  cnic: string;
-}
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { toast } from "react-toastify";
+import {
+  useEmployees,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+  type User,
+} from "../../hooks/useEmployee";
+import {
+  validateUser,
+  validateUpdateUser,
+  formatCNIC,
+  type UserFormData,
+} from "../../validators/employeeValidation";
 
 interface UserFormProps {
-  user: User;
-  onChange: (user: User) => void;
+  user: UserFormData;
+  onChange: (user: UserFormData) => void;
   onSubmit: () => void;
   onCancel: () => void;
   submitText: string;
+  isSubmitting: boolean;
+  isUpdate: boolean;
 }
 
 const UserForm: React.FC<UserFormProps> = ({
@@ -142,35 +65,22 @@ const UserForm: React.FC<UserFormProps> = ({
   onSubmit,
   onCancel,
   submitText,
+  isSubmitting,
+  isUpdate,
 }) => {
-  const [errors, setErrors] = useState<Partial<Record<keyof User, string>>>({});
-
-  const formatCNIC = (value: string) => {
-    const numbers = value.replace(/\D/g, "").slice(0, 13);
-    if (numbers.length <= 5) return numbers;
-    if (numbers.length <= 12)
-      return `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
-    return `${numbers.slice(0, 5)}-${numbers.slice(5, 12)}-${numbers.slice(
-      12
-    )}`;
-  };
-
-  const validate = () => {
-    const newErrors: Partial<Record<keyof User, string>> = {};
-    if (!user.name) newErrors.name = "Name is required";
-    if (!user.email || !/\S+@\S+\.\S+/.test(user.email))
-      newErrors.email = "Valid email is required";
-    if (!user.phone) newErrors.phone = "Phone is required";
-    if (!user.cnic || user.cnic.replace(/\D/g, "").length !== 13)
-      newErrors.cnic = "CNIC must be 13 digits";
-    if (!user.designation) newErrors.designation = "Designation is required";
-    if (!user.grade) newErrors.grade = "Grade is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof UserFormData, string>>
+  >({});
 
   const handleSubmit = () => {
-    if (validate()) onSubmit();
+    const validator = isUpdate ? validateUpdateUser : validateUser;
+    const { isValid, errors } = validator(user);
+    if (!isValid) {
+      setErrors(errors);
+      return;
+    }
+    setErrors({});
+    onSubmit();
   };
 
   return (
@@ -181,10 +91,9 @@ const UserForm: React.FC<UserFormProps> = ({
           <Input
             id="name"
             value={user.name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange({ ...user, name: e.target.value })
-            }
+            onChange={(e) => onChange({ ...user, name: e.target.value })}
             placeholder="Enter full name"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.name && (
             <p className="text-sm text-destructive">{errors.name}</p>
@@ -196,10 +105,9 @@ const UserForm: React.FC<UserFormProps> = ({
             id="email"
             type="email"
             value={user.email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange({ ...user, email: e.target.value })
-            }
+            onChange={(e) => onChange({ ...user, email: e.target.value })}
             placeholder="user@example.com"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.email && (
             <p className="text-sm text-destructive">{errors.email}</p>
@@ -212,10 +120,9 @@ const UserForm: React.FC<UserFormProps> = ({
           <Input
             id="phone"
             value={user.phone}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange({ ...user, phone: e.target.value })
-            }
-            placeholder="123-456-7890"
+            onChange={(e) => onChange({ ...user, phone: e.target.value })}
+            placeholder="+12025550123 or +447911123456"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.phone && (
             <p className="text-sm text-destructive">{errors.phone}</p>
@@ -226,11 +133,12 @@ const UserForm: React.FC<UserFormProps> = ({
           <Input
             id="cnic"
             value={user.cnic}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange={(e) =>
               onChange({ ...user, cnic: formatCNIC(e.target.value) })
             }
             placeholder="37405-2999873-3"
             maxLength={15}
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.cnic && (
             <p className="text-sm text-destructive">{errors.cnic}</p>
@@ -243,117 +151,129 @@ const UserForm: React.FC<UserFormProps> = ({
           <Input
             id="designation"
             value={user.designation}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onChange({ ...user, designation: e.target.value })
-            }
+            onChange={(e) => onChange({ ...user, designation: e.target.value })}
             placeholder="Job title"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.designation && (
             <p className="text-sm text-destructive">{errors.designation}</p>
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="grade">Grade</Label>
-          <Select
+          <Label htmlFor="department">Department</Label>
+          <Input
+            id="department"
+            value={user.department}
+            onChange={(e) => onChange({ ...user, department: e.target.value })}
+            placeholder="Department name"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+          />
+          {errors.department && (
+            <p className="text-sm text-destructive">{errors.department}</p>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="grade">Grade (Number)</Label>
+          <Input
+            id="grade"
+            type="number"
+            min="1"
+            max="20"
             value={user.grade}
-            onValueChange={(value) => onChange({ ...user, grade: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select grade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="A">Grade A</SelectItem>
-              <SelectItem value="B">Grade B</SelectItem>
-              <SelectItem value="C">Grade C</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(e) =>
+              onChange({ ...user, grade: parseInt(e.target.value) || 0 })
+            }
+            placeholder="Enter grade (1-20)"
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+          />
           {errors.grade && (
             <p className="text-sm text-destructive">{errors.grade}</p>
           )}
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">
+            {isUpdate ? "New Password (Optional)" : "Password"}
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            value={user.password || ""}
+            onChange={(e) => onChange({ ...user, password: e.target.value })}
+            placeholder={
+              isUpdate
+                ? "Leave blank to keep current password"
+                : "Enter password"
+            }
+            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive">{errors.password}</p>
+          )}
+        </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel}>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="hover:bg-gray-100 transition-colors"
+        >
           Cancel
         </Button>
-        <Button onClick={handleSubmit}>{submitText}</Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="bg-blue-600 hover:bg-blue-700 transition-colors"
+        >
+          {isSubmitting ? (isUpdate ? "Updating..." : "Adding...") : submitText}
+        </Button>
       </DialogFooter>
     </div>
   );
 };
 
-function Users() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@eoffice.com",
-      phone: "123-456-7890",
-      grade: "A",
-      designation: "Developer",
-      cnic: "37405-2999873-3",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@eoffice.com",
-      phone: "098-765-4321",
-      grade: "B",
-      designation: "Manager",
-      cnic: "37405-2999873-4",
-    },
-    {
-      id: 3,
-      name: "Alice Johnson",
-      email: "alice@eoffice.com",
-      phone: "555-123-4567",
-      grade: "A",
-      designation: "Designer",
-      cnic: "37405-2999873-5",
-    },
-    {
-      id: 4,
-      name: "Bob Wilson",
-      email: "bob@eoffice.com",
-      phone: "444-987-6543",
-      grade: "C",
-      designation: "Analyst",
-      cnic: "37405-2999873-6",
-    },
-    {
-      id: 5,
-      name: "Carol Davis",
-      email: "carol@eoffice.com",
-      phone: "333-555-7777",
-      grade: "B",
-      designation: "Team Lead",
-      cnic: "37405-2999873-7",
-    },
-  ]);
-
-  const [newUser, setNewUser] = useState<User>({
-    id: 0,
-    name: "",
-    email: "",
-    phone: "",
-    grade: "",
-    designation: "",
-    cnic: "",
-  });
-
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<
+    | (UserFormData & { _id?: string; createdAt?: string; updatedAt?: string })
+    | null
+  >(null);
+  const [newUser, setNewUser] = useState<UserFormData>({
+    name: "",
+    email: "",
+    phone: "",
+    grade: 5,
+    designation: "",
+    cnic: "",
+    department: "",
+    password: "",
+  });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(3);
+  const itemsPerPage = 5;
+
+  const { data: users = [], isLoading, error } = useEmployees();
+  const createUserMutation = useCreateUser();
+  const updateUserMutation = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
+
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching employees:", error);
+    }
+  }, [error]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(
       (user) =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.designation.toLowerCase().includes(searchTerm.toLowerCase())
+        user.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.department.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [users, searchTerm]);
 
@@ -361,6 +281,7 @@ function Users() {
     () => Math.ceil(filteredUsers.length / itemsPerPage),
     [filteredUsers.length, itemsPerPage]
   );
+
   const paginatedUsers = useMemo(
     () =>
       filteredUsers.slice(
@@ -371,110 +292,150 @@ function Users() {
   );
 
   const handleAddUser = () => {
-    const maxId = Math.max(...users.map((u) => u.id), 0);
-    setUsers([...users, { ...newUser, id: maxId + 1 }]);
-    setNewUser({
-      id: 0,
-      name: "",
-      email: "",
-      phone: "",
-      grade: "",
-      designation: "",
-      cnic: "",
+    createUserMutation.mutate(newUser, {
+      onSuccess: () => {
+        setNewUser({
+          name: "",
+          email: "",
+          phone: "",
+          grade: 5,
+          designation: "",
+          cnic: "",
+          department: "",
+          password: "",
+        });
+        setIsAddModalOpen(false);
+      },
+      onError: (error) => {
+        console.error("Failed to add user:", error);
+      },
     });
-    setIsAddModalOpen(false);
   };
 
   const handleEditUser = (user: User) => {
-    setEditingUser({ ...user });
+    setEditingUser({ ...user, password: "" } as UserFormData);
     setIsEditModalOpen(true);
   };
 
   const handleUpdateUser = () => {
-    if (editingUser) {
-      setUsers(users.map((u) => (u.id === editingUser.id ? editingUser : u)));
-      setEditingUser(null);
-      setIsEditModalOpen(false);
-    }
-  };
+    if (editingUser && editingUser._id) {
+      // Find the original user data
+      const originalUser = users.find((u) => u._id === editingUser._id);
+      if (!originalUser) {
+        toast.error("Original user data not found");
+        return;
+      }
 
-  const handleDeleteUser = (id: number) => {
-    setUsers(users.filter((u) => u.id !== id));
-    const newFilteredUsers = users
-      .filter((u) => u.id !== id)
-      .filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.designation.toLowerCase().includes(searchTerm.toLowerCase())
+      // Prepare the payload with only allowed fields
+      const payload = {
+        name: editingUser.name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        grade: editingUser.grade,
+        designation: editingUser.designation,
+        cnic: editingUser.cnic,
+        department: editingUser.department,
+        password: editingUser.password?.trim() || undefined,
+      };
+
+      // Explicitly compare each field to detect changes
+      const hasChanges =
+        payload.name !== originalUser.name ||
+        payload.email !== originalUser.email ||
+        payload.phone !== originalUser.phone ||
+        payload.grade !== originalUser.grade ||
+        payload.designation !== originalUser.designation ||
+        payload.cnic !== originalUser.cnic ||
+        payload.department !== originalUser.department ||
+        (payload.password !== undefined && payload.password !== "");
+
+      if (!hasChanges) {
+        toast.info("No changes made to user data");
+        setIsEditModalOpen(false);
+        return;
+      }
+
+      updateUserMutation.mutate(
+        { id: editingUser._id, data: payload as unknown as User },
+        {
+          onSuccess: () => {
+            setEditingUser(null);
+            setIsEditModalOpen(false);
+          },
+          onError: (error) => {
+            console.error("Failed to update user:", error);
+            toast.error(`Failed to update user: ${error.message}`);
+          },
+        }
       );
-    const newTotalPages = Math.ceil(newFilteredUsers.length / itemsPerPage);
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(newTotalPages);
-    } else if (newTotalPages === 0) {
-      setCurrentPage(1);
     }
   };
 
-  const getGradeBadgeVariant = (grade: string) => {
-    switch (grade) {
-      case "A":
-        return "default";
-      case "B":
-        return "secondary";
-      case "C":
-        return "outline";
-      default:
-        return "outline";
+  const handleConfirmDelete = () => {
+    if (deleteUserId) {
+      deleteUserMutation.mutate(deleteUserId, {
+        onSuccess: () => {
+          const newFilteredUsers = filteredUsers.filter(
+            (u) => u._id !== deleteUserId
+          );
+          const newTotalPages = Math.ceil(
+            newFilteredUsers.length / itemsPerPage
+          );
+          if (currentPage > newTotalPages && newTotalPages > 0) {
+            setCurrentPage(newTotalPages);
+          } else if (newTotalPages === 0) {
+            setCurrentPage(1);
+          }
+          setDeleteUserId(null);
+        },
+      });
     }
   };
+
+  const getGradeBadgeVariant = (grade: number) => {
+    if (grade >= 1 && grade <= 5) return "default";
+    if (grade >= 6 && grade <= 10) return "secondary";
+    return "outline";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading users...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-destructive">
+        Error: {error.message}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage your organization's users and their information
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <UsersIcon className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      </div>
-
-      <Card>
+    <div className="space-y-6">
+      <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader>
-          <CardTitle>Search & Actions</CardTitle>
-          <CardDescription>
-            Find users by name, email, or designation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10"
-              />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                User Management
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage all system users and their permissions
+              </CardDescription>
             </div>
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogTrigger asChild>
-                <Button className="shrink-0">
+                <Button className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 transition-colors">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User
+                  Add New User
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] z-[99999]">
+              <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                   <DialogTitle>Add New User</DialogTitle>
                   <DialogDescription>
@@ -487,29 +448,42 @@ function Users() {
                   onSubmit={handleAddUser}
                   onCancel={() => setIsAddModalOpen(false)}
                   submitText="Add User"
+                  isSubmitting={createUserMutation.isPending}
+                  isUpdate={false}
                 />
               </DialogContent>
             </Dialog>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Users List</CardTitle>
-          <CardDescription>
-            {filteredUsers.length === 0
-              ? "No users found"
-              : `Showing ${Math.min(
-                  (currentPage - 1) * itemsPerPage + 1,
-                  filteredUsers.length
-                )}-${Math.min(
-                  currentPage * itemsPerPage,
-                  filteredUsers.length
-                )} of ${filteredUsers.length} users`}
-          </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-8 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2 hover:bg-gray-100 transition-colors"
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 hover:bg-gray-100 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
           {filteredUsers.length === 0 ? (
             <div className="text-center py-8">
               <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -519,107 +493,163 @@ function Users() {
             </div>
           ) : (
             <>
-              <div className="w-full h-full rounded-xl border overflow-x-auto">
-                <Table density="comfortable" className="w-full table-auto">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>CNIC</TableHead>
-                      <TableHead>Designation</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.name}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phone}</TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {user.cnic}
-                        </TableCell>
-                        <TableCell>{user.designation}</TableCell>
-                        <TableCell>
-                          <Badge variant={getGradeBadgeVariant(user.grade)}>
-                            Grade {user.grade}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-start gap-4">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
-                              aria-label={`Edit ${user.name}`}
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">
+                          User
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">
+                          Designation
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">
+                          Department
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">
+                          Grade
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {paginatedUsers.map((user) => (
+                        <tr
+                          key={user._id}
+                          className="hover:bg-gray-50 transition-colors duration-200"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-blue-100 text-blue-800">
+                                  {user.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {user.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {user.email}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="h-4 w-4 text-gray-400" />
+                              <span>{user.designation}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {user.department}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                getGradeBadgeVariant(user.grade) === "default"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : getGradeBadgeVariant(user.grade) ===
+                                    "secondary"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-destructive hover:text-destructive"
-                              aria-label={`Delete ${user.name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.max(prev - 1, 1))
-                      }
-                      disabled={currentPage === 1}
-                      aria-label="Previous page"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                      }
-                      disabled={currentPage === totalPages}
-                      aria-label="Next page"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                              Grade {user.grade}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-gray-200 transition-colors"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditUser(user)}
+                                className="hover:bg-gray-200 transition-colors"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeleteUserId(user._id)}
+                                className="hover:bg-red-100 text-red-600 transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+              </div>
+              <div className="flex items-center justify-between mt-6">
+                <p className="text-sm text-gray-700">
+                  Showing{" "}
+                  <span className="font-medium">
+                    {(currentPage - 1) * itemsPerPage + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium">
+                    {Math.min(currentPage * itemsPerPage, filteredUsers.length)}
+                  </span>{" "}
+                  of <span className="font-medium">{filteredUsers.length}</span>{" "}
+                  results
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="hover:bg-gray-100 transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="hover:bg-gray-100 transition-colors"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>
       </Card>
-
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update the user's information below.
+              Update the user's information below. Password is optional for
+              updates.
             </DialogDescription>
           </DialogHeader>
           {editingUser && (
@@ -629,12 +659,41 @@ function Users() {
               onSubmit={handleUpdateUser}
               onCancel={() => setIsEditModalOpen(false)}
               submitText="Save Changes"
+              isSubmitting={updateUserMutation.isPending}
+              isUpdate={true}
             />
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this user? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteUserId(null)}
+              disabled={deleteUserMutation.isPending}
+              className="hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteUserMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-export default Users;
