@@ -26,22 +26,31 @@ function Login() {
       { email, password },
       {
         onSuccess: (data) => {
-          console.log("Login successful:", data.user.designation);
-          switch (data.user.designation) {
-            case "Admin":
+          console.log("Login successful - Full response:", data);
+          console.log("User role:", data.user.role);
+          console.log("Role lowercase:", data.user.role.toLowerCase());
+
+          switch (data.user.role.toLowerCase()) {
+            case "admin":
+              console.log("Navigating to admin dashboard");
               navigate("/admin");
               break;
-            case "Manager":
+            case "manager":
+              console.log("Navigating to manager dashboard");
               navigate("/manager");
               break;
-            default:
+            case "employee":
+              console.log("Navigating to employee dashboard");
               navigate("/employee");
+              break;
+            default:
+              console.log("Navigating to employee dashboard");
+              navigate("/login");
           }
         },
       }
     );
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />

@@ -5,6 +5,7 @@ export interface Admin {
   email: string;
   name?: string;
   designation: string; // Added to match backend response
+  role: string;
 }
 
 export interface Employee {
@@ -15,6 +16,7 @@ export interface Employee {
   grade: number;
   designation: string;
   cnic: string;
+  role: string;
 }
 
 export type User = Admin | Employee;

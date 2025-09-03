@@ -5,6 +5,7 @@ export interface Admin {
   _id: string;
   email: string;
   name?: string;
+  role: string;
 }
 
 export interface Employee {
@@ -15,6 +16,7 @@ export interface Employee {
   grade: number;
   designation: string;
   cnic: string;
+  role:string
 }
 
 export type User = Admin | Employee;

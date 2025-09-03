@@ -22,7 +22,7 @@ function App() {
     if (!isAuthenticated) {
       return <Navigate to="/login" replace />;
     }
-    if (!user || !allowedDesignations.includes(user.designation)) {
+    if (!user || !allowedDesignations.includes(user.role)) {
       return <Navigate to="/login" replace />;
     }
     return children;
@@ -49,7 +49,7 @@ function App() {
       <Route
         path="/manager"
         element={
-          <ProtectedRoute allowedDesignations={["Manager"]}>
+          <ProtectedRoute allowedDesignations={["manager"]}>
             <ManagerDashboard />
           </ProtectedRoute>
         }
@@ -57,9 +57,7 @@ function App() {
       <Route
         path="/employee"
         element={
-          <ProtectedRoute
-            allowedDesignations={["Developer", "UI/UX Designer", "Analyst"]}
-          >
+          <ProtectedRoute allowedDesignations={["employee"]}>
             <EmployeeDashboard />
           </ProtectedRoute>
         }
