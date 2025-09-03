@@ -14,6 +14,11 @@ export const userSchema = z.object({
     .transform((val) => val.replace(/\D/g, ""))
     .refine((val) => val.length === 13, "CNIC must be 13 digits"),
   department: z.string().min(1, "Department is required").trim(),
+
+  // 👇 Added role validation
+  role: z.enum(["employee", "manager"], {
+    message: "Role must be employee, manager",
+  }),
 });
 
 export const updateUserSchema = userSchema.extend({

@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "../../components/ui/dialog";
 import {
   Card,
@@ -47,6 +54,7 @@ import {
   formatCNIC,
   type UserFormData,
 } from "../../validators/employeeValidation";
+import { useDebounce } from "use-debounce";
 
 interface UserFormProps {
   user: UserFormData;
@@ -174,7 +182,7 @@ const UserForm: React.FC<UserFormProps> = ({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="grade">Grade (Number)</Label>
+          <Label htmlFor="grade">Grade (1–20)</Label>
           <Input
             id="grade"
             type="number"
@@ -184,7 +192,7 @@ const UserForm: React.FC<UserFormProps> = ({
             onChange={(e) =>
               onChange({ ...user, grade: parseInt(e.target.value) || 0 })
             }
-            placeholder="Enter grade (1-20)"
+            placeholder="Enter grade"
             className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
           />
           {errors.grade && (
@@ -192,25 +200,40 @@ const UserForm: React.FC<UserFormProps> = ({
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">
-            {isUpdate ? "New Password (Optional)" : "Password"}
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            value={user.password || ""}
-            onChange={(e) => onChange({ ...user, password: e.target.value })}
-            placeholder={
-              isUpdate
-                ? "Leave blank to keep current password"
-                : "Enter password"
+          <Label htmlFor="role">Role</Label>
+          <Select
+            value={user.role || "employee"}
+            onValueChange={(value) =>
+              onChange({ ...user, role: value as "employee" | "manager" })
             }
-            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.password && (
-            <p className="text-sm text-destructive">{errors.password}</p>
-          )}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent className="z-99999999">
+              <SelectItem value="employee">Employee</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">
+          {isUpdate ? "New Password (Optional)" : "Password"}
+        </Label>
+        <Input
+          id="password"
+          type="password"
+          value={user.password || ""}
+          onChange={(e) => onChange({ ...user, password: e.target.value })}
+          placeholder={
+            isUpdate ? "Leave blank to keep current password" : "Enter password"
+          }
+          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+        />
+        {errors.password && (
+          <p className="text-sm text-destructive">{errors.password}</p>
+        )}
       </div>
       <DialogFooter>
         <Button
@@ -235,6 +258,7 @@ const UserForm: React.FC<UserFormProps> = ({
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -251,81 +275,87 @@ export default function Users() {
     cnic: "",
     department: "",
     password: "",
+    role: "employee",
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
 
-  const { data: users = [], isLoading, error } = useEmployees();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const {
+    data = { users: [], total: 0, totalPages: 1, currentPage: 1 },
+    isLoading,
+    error,
+  } = useEmployees({
+    page: currentPage,
+    limit: itemsPerPage,
+    sort: "-createdAt",
+    search: debouncedSearchTerm,
+  });
+
+  // Debugging logs to diagnose list rendering issues
+  useEffect(() => {
+    console.log("useEmployees data:", data);
+    console.log("isLoading:", isLoading);
+    console.log("error:", error);
+    console.log("searchTerm:", searchTerm);
+    console.log("debouncedSearchTerm:", debouncedSearchTerm);
+  }, [data, isLoading, error, searchTerm, debouncedSearchTerm]);
+
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
 
   useEffect(() => {
     if (error) {
-      console.error("Error fetching employees:", error);
+      toast.error(`Error fetching employees: ${error.message}`);
     }
   }, [error]);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.department.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [users, searchTerm]);
-
-  const totalPages = useMemo(
-    () => Math.ceil(filteredUsers.length / itemsPerPage),
-    [filteredUsers.length, itemsPerPage]
-  );
-
-  const paginatedUsers = useMemo(
-    () =>
-      filteredUsers.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-      ),
-    [filteredUsers, currentPage, itemsPerPage]
-  );
-
   const handleAddUser = () => {
-    createUserMutation.mutate(newUser, {
-      onSuccess: () => {
-        setNewUser({
-          name: "",
-          email: "",
-          phone: "",
-          grade: 5,
-          designation: "",
-          cnic: "",
-          department: "",
-          password: "",
-        });
-        setIsAddModalOpen(false);
+    createUserMutation.mutate(
+      {
+        ...newUser,
       },
-      onError: (error) => {
-        console.error("Failed to add user:", error);
-      },
-    });
+      {
+        onSuccess: () => {
+          setNewUser({
+            name: "",
+            email: "",
+            phone: "",
+            grade: 5,
+            designation: "",
+            cnic: "",
+            department: "",
+            password: "",
+            role: "employee",
+          });
+          setIsAddModalOpen(false);
+          toast.success("User added successfully!");
+        },
+        onError: (error: Error) => {
+          toast.error(`Failed to add user: ${error.message}`);
+        },
+      }
+    );
   };
 
   const handleEditUser = (user: User) => {
-    setEditingUser({ ...user, password: "" } as UserFormData);
+    setEditingUser({
+      ...user,
+      password: "",
+      role: user.role || "employee", // Ensure role has a fallback
+    } as UserFormData);
     setIsEditModalOpen(true);
   };
 
   const handleUpdateUser = () => {
     if (editingUser && editingUser._id) {
-      // Find the original user data
-      const originalUser = users.find((u) => u._id === editingUser._id);
+      const originalUser = data.users.find((u) => u._id === editingUser._id);
       if (!originalUser) {
         toast.error("Original user data not found");
         return;
       }
 
-      // Prepare the payload with only allowed fields
       const payload = {
         name: editingUser.name,
         email: editingUser.email,
@@ -334,10 +364,10 @@ export default function Users() {
         designation: editingUser.designation,
         cnic: editingUser.cnic,
         department: editingUser.department,
+        role: editingUser.role,
         password: editingUser.password?.trim() || undefined,
       };
 
-      // Explicitly compare each field to detect changes
       const hasChanges =
         payload.name !== originalUser.name ||
         payload.email !== originalUser.email ||
@@ -346,6 +376,7 @@ export default function Users() {
         payload.designation !== originalUser.designation ||
         payload.cnic !== originalUser.cnic ||
         payload.department !== originalUser.department ||
+        payload.role !== originalUser.role ||
         (payload.password !== undefined && payload.password !== "");
 
       if (!hasChanges) {
@@ -360,9 +391,9 @@ export default function Users() {
           onSuccess: () => {
             setEditingUser(null);
             setIsEditModalOpen(false);
+            toast.success("User updated successfully!");
           },
-          onError: (error) => {
-            console.error("Failed to update user:", error);
+          onError: (error: Error) => {
             toast.error(`Failed to update user: ${error.message}`);
           },
         }
@@ -374,18 +405,14 @@ export default function Users() {
     if (deleteUserId) {
       deleteUserMutation.mutate(deleteUserId, {
         onSuccess: () => {
-          const newFilteredUsers = filteredUsers.filter(
-            (u) => u._id !== deleteUserId
-          );
-          const newTotalPages = Math.ceil(
-            newFilteredUsers.length / itemsPerPage
-          );
-          if (currentPage > newTotalPages && newTotalPages > 0) {
-            setCurrentPage(newTotalPages);
-          } else if (newTotalPages === 0) {
-            setCurrentPage(1);
+          if (data.users.length === 1 && currentPage > 1) {
+            setCurrentPage((prev) => prev - 1);
           }
           setDeleteUserId(null);
+          toast.success("User deleted successfully!");
+        },
+        onError: (error: Error) => {
+          toast.error(`Failed to delete user: ${error.message}`);
         },
       });
     }
@@ -483,11 +510,13 @@ export default function Users() {
               Export
             </Button>
           </div>
-          {filteredUsers.length === 0 ? (
+          {data.users.length === 0 ? (
             <div className="text-center py-8">
               <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
-                No users found matching your search.
+                {searchTerm
+                  ? "No users found matching your search."
+                  : "No users found."}
               </p>
             </div>
           ) : (
@@ -509,13 +538,16 @@ export default function Users() {
                         <th className="px-4 py-3 text-left font-medium text-gray-700">
                           Grade
                         </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">
+                          Role
+                        </th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {paginatedUsers.map((user) => (
+                      {data.users.map((user) => (
                         <tr
                           key={user._id}
                           className="hover:bg-gray-50 transition-colors duration-200"
@@ -565,13 +597,21 @@ export default function Users() {
                               Grade {user.grade}
                             </span>
                           </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {user.role
+                                ? user.role.charAt(0).toUpperCase() +
+                                  user.role.slice(1)
+                                : "Unknown"}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleEditUser(user)}
-                                className=" transition-colors"
+                                className="transition-colors"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -599,10 +639,9 @@ export default function Users() {
                   </span>{" "}
                   to{" "}
                   <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, filteredUsers.length)}
+                    {Math.min(currentPage * itemsPerPage, data.total)}
                   </span>{" "}
-                  of <span className="font-medium">{filteredUsers.length}</span>{" "}
-                  results
+                  of <span className="font-medium">{data.total}</span> results
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -621,9 +660,11 @@ export default function Users() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      setCurrentPage((prev) =>
+                        Math.min(prev + 1, data.totalPages)
+                      )
                     }
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === data.totalPages}
                     className="hover:bg-gray-100 transition-colors"
                   >
                     Next

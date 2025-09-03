@@ -10,12 +10,25 @@ import {
 import { toast } from "react-toastify";
 
 // ✅ Fetch employees
-export const useEmployees = (p0: { page: number; limit: number; sort: string; }
-  
-) => {
-  return useQuery<User[], Error>({
-    queryKey: ["employees"],
-    queryFn: getEmployees,
+export const useEmployees = ({
+  page = 1,
+  limit = 10,
+  sort = "-createdAt",
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  search?: string;
+} = {}) => {
+  return useQuery<{
+    users: User[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+  }>({
+    queryKey: ["employees", { page, limit, sort, search }],
+    queryFn: () => getEmployees({ page, limit, sort, search }),
   });
 };
 
@@ -25,7 +38,7 @@ export const useCreateUser = () => {
   return useMutation({
     mutationFn: createUser,
     onSuccess: () => {
-      toast.success("User added successfully!");
+      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
     },
     onError: (error: Error) => {
@@ -55,8 +68,8 @@ export const useDeleteUser = () => {
   return useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
-      toast.success("User deleted successfully!");
       queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
     },
     onError: (error: Error) => {
       toast.error(`Failed to delete user: ${error.message}`);

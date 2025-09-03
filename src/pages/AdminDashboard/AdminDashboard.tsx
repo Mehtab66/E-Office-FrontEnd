@@ -83,13 +83,12 @@ function AdminDashboard() {
 
   // Recent registrations
   const recentRegistrations =
-    recentData?.
+    recentData?.users?.
     map((user) => ({
       name: user.name,
       email: user.email,
       role: user.designation || "Unknown",
-      date: new Date(user.createdAt).toISOString().split("T")[0],
-      status: user.status || "Active", // Adjust based on actual status field
+      date: user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "Unknown",
     })) || [];
 
   return (

@@ -1,8 +1,7 @@
 import apiClient from "./apiClient";
 
 export interface User {
-  status: string;
-  createdAt: string | number | Date;
+  createdAt?: string | number | Date; // 👈 optional
   department: string;
   _id: string;
   name: string;
@@ -11,6 +10,7 @@ export interface User {
   grade: number;
   designation: string;
   cnic: string;
+  role: "employee" | "manager"; // 👈 Added role field
 }
 
 // ✅ Create user
@@ -24,10 +24,27 @@ export const createUser = async (data: Omit<User, "_id">): Promise<User> => {
 };
 
 // ✅ Fetch all employees
-export const getEmployees = async (): Promise<User[]> => {
+export const getEmployees = async ({
+  page = 1,
+  limit = 10,
+  sort = "-createdAt",
+  search = "",
+}: {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  search?: string;
+} = {}): Promise<{
+  users: User[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}> => {
   try {
-    const response = await apiClient.get("/admin/GetEmployees");
-    return response.data.users;
+    const response = await apiClient.get("/admin/GetEmployees", {
+      params: { page, limit, sort, search },
+    });
+    return response.data;
   } catch (error: any) {
     throw new Error(
       error.response?.data?.message || "Failed to fetch employees"
@@ -66,10 +83,11 @@ export const getDashboardStats = async () => {
   try {
     const response = await apiClient.get("/admin/GetDashboardStats");
     return response.data; // Returns { totalUsers, designations, totalDepartments }
-  } catch (error) {
+  } catch (error: any) {
     if (typeof error === "object" && error !== null && "response" in error) {
-      // @ts-ignore
-      throw new Error(error.response?.data?.message || "Failed to fetch dashboard stats");
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch dashboard stats"
+      );
     }
     throw new Error("Failed to fetch dashboard stats");
   }
