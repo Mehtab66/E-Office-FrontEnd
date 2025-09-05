@@ -7,39 +7,13 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiEdit,
+  FiClock,
 } from "react-icons/fi";
-import AddEntityModal, { projectConfig } from "../AddEntity/AddEntityModal";
-
-interface Project {
-  id: string;
-  name: string;
-  client: string;
-  status: "active" | "pending" | "completed";
-  startDate: string;
-  estimatedTime: string;
-  teamLead: string;
-  teamMembers: string[];
-}
-
-interface TimeEntry {
-  id: string;
-  employee: string;
-  project: string;
-  date: string;
-  hours: number;
-  description: string;
-}
-
-interface Deliverable {
-  id: string;
-  date: string;
-  description: string;
-  notes: string;
-}
+import type { Project, TimeEntry, Deliverable } from "../../types";
 
 interface ProjectsViewProps {
   projects: Project[];
-  onEditProject: (id: string, data: any) => void;
+  onEditProject: (id: string, data: Partial<Project>) => void;
   timeEntries: TimeEntry[];
   onAddDeliverable: (data: Deliverable) => void;
   setActiveView: (view: string) => void;
@@ -58,7 +32,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
     direction: "asc" | "desc";
   }>({ key: "name", direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const itemsPerPage = 10;
 
   // Filter projects based on search term
@@ -125,26 +98,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
     );
   };
 
-  // Handle edit project
-  const handleEditProject = (project: Project) => {
-    setEditingProject(project);
-  };
-
-  // Handle save edited project
-  const handleSaveEdit = (data: any) => {
-    onEditProject(editingProject!.id, data);
-    setEditingProject(null);
-  };
-
   // Handle timesheet navigation with validation
   const handleTimesheetNavigation = (project: Project) => {
-    console.log("Setting active view for timesheet:", project.id, project.name); // Debug log
-    if (!project || !project.id || !project.name) {
+    if (!project || !project._id || !project.name) {
       console.error("Invalid project data:", project);
       alert("Error: Invalid project data");
       return;
     }
-    setActiveView(`timesheet-${project.id}`);
+    setActiveView(`timesheet-${project._id}`);
   };
 
   return (
@@ -173,7 +134,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
           <thead className="bg-muted">
             <tr>
               {[
-                { key: "id", label: "ID" },
                 { key: "name", label: "Name" },
                 { key: "client", label: "Client" },
                 { key: "status", label: "Status" },
@@ -204,24 +164,37 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
             {paginatedProjects.length > 0 ? (
               paginatedProjects.map((project) => (
                 <tr
-                  key={project.id}
+                  key={project._id}
                   className="border-b border-border hover:bg-muted/50"
                 >
-                  <td className="px-4 py-3">{project.id}</td>
                   <td className="px-4 py-3 font-medium">{project.name}</td>
-                  <td className="px-4 py-3">{project.client}</td>
+                  <td className="px-4 py-3">
+                    {typeof project.client === "string"
+                      ? project.client
+                      : project.client.name}
+                  </td>
                   <td className="px-4 py-3">
                     {renderStatusBadge(project.status)}
                   </td>
                   <td className="px-4 py-3">{project.startDate}</td>
                   <td className="px-4 py-3">{project.estimatedTime}</td>
-                  <td className="px-4 py-3">{project.teamLead}</td>
                   <td className="px-4 py-3">
-                    {project.teamMembers.join(", ") || "None"}
+                    {typeof project.teamLead === "string"
+                      ? project.teamLead
+                      : project.teamLead.name}
+                  </td>
+                  <td className="px-4 py-3">
+                    {project.teamMembers.length > 0
+                      ? project.teamMembers
+                          .map((member: string | { name: string }) =>
+                            typeof member === "string" ? member : member.name
+                          )
+                          .join(", ")
+                      : "None"}
                   </td>
                   <td className="px-4 py-3 flex gap-2">
                     <button
-                      onClick={() => handleEditProject(project)}
+                      onClick={() => onEditProject(project._id, project)}
                       className="px-3 py-1 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-1"
                     >
                       <FiEdit /> Edit
@@ -230,7 +203,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                       onClick={() => handleTimesheetNavigation(project)}
                       className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-1"
                     >
-                      More 
+                      <FiClock /> Timesheet
                     </button>
                   </td>
                 </tr>
@@ -276,18 +249,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
             </button>
           </div>
         </div>
-      )}
-
-      {/* Edit Modal */}
-      {editingProject && (
-        <AddEntityModal
-          config={{
-            ...projectConfig,
-            title: "Edit Project",
-            onSubmit: handleSaveEdit,
-          }}
-          onClose={() => setEditingProject(null)}
-        />
       )}
     </div>
   );

@@ -7,4 +7,5 @@ export interface Employee {
   password: string;
   designation: string; // e.g., "Manager", "Developer", "Analyst"
   cnic: string;
+  projects: string[];
 }

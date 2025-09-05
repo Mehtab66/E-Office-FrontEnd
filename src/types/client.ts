@@ -7,5 +7,8 @@ export interface Client {
   currency: string;
   billingAddress: string;
   shippingAddress: string;
-
+  projects: string[];
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

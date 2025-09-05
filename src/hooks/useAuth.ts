@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
-import { login, type User } from "../apis/authService";
+import { login, logout, type User } from "../apis/authService";
 import { toast } from "react-toastify";
 import { useAuthStore } from "../store/authStore";
-
+import { useNavigate } from "react-router-dom";
 export const useAuthLogin = () => {
   const { login: setAuth } = useAuthStore();
   return useMutation({
@@ -14,6 +14,22 @@ export const useAuthLogin = () => {
     },
     onError: (error: Error) => {
       toast.error(`Login failed: ${error.message}`);
+    },
+  });
+};
+export const useAuthLogout = () => {
+  const { logout: clearAuth } = useAuthStore();
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      clearAuth();
+      localStorage.removeItem("authToken");
+      toast.success("Logged out successfully!");
+      navigate("/login");
+    },
+    onError: (error: Error) => {
+      toast.error(`Logout failed: ${error.message}`);
     },
   });
 };

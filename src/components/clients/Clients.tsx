@@ -6,18 +6,7 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  billingAddress: string;
-  shippingAddress: string;
-  projects: string[];
-  currency: string;
-}
+import type { Client } from "../../types";
 
 interface ClientsViewProps {
   clients: Client[];
@@ -61,7 +50,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
     <div className="container mx-auto px-4 py-6 bg-background min-h-screen">
       <div className="bg-card rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <FiUsers /> Clients
+          </h1>
           <div className="relative w-64">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <input
@@ -89,13 +80,19 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
                   <th
                     key={header.key}
                     onClick={() =>
-                      header.key && handleSort(header.key as keyof Client)
+                      header.key !== "projects" &&
+                      handleSort(header.key as keyof Client)
                     }
-                    className="px-4 py-3 font-semibold text-muted-foreground cursor-pointer hover:text-foreground"
+                    className={`px-4 py-3 font-semibold text-muted-foreground ${
+                      header.key !== "projects"
+                        ? "cursor-pointer hover:text-foreground"
+                        : ""
+                    }`}
                   >
                     <div className="flex items-center">
                       {header.label}
                       {sortField === header.key &&
+                        header.key !== "projects" &&
                         (sortDirection === "asc" ? (
                           <FiChevronUp className="ml-1" />
                         ) : (
@@ -110,7 +107,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
               {filteredClients.length > 0 ? (
                 filteredClients.map((client) => (
                   <tr
-                    key={client.id}
+                    key={client._id}
                     className="border-b border-border hover:bg-muted/50 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium">{client.name}</td>
@@ -119,7 +116,13 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
                     <td className="px-4 py-3">{client.country}</td>
                     <td className="px-4 py-3">
                       {client.projects.length > 0
-                        ? client.projects.join(", ")
+                        ? client.projects
+                            .map((project) =>
+                              typeof project === "string"
+                                ? project
+                                : project.name
+                            )
+                            .join(", ")
                         : "None"}
                     </td>
                     <td className="px-4 py-3">
@@ -127,6 +130,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
                         <button
                           onClick={() => onEditClient(client)}
                           className="text-primary hover:text-primary/80 transition-colors"
+                          aria-label={`Edit client ${client.name}`}
                         >
                           <FiEdit2 />
                         </button>

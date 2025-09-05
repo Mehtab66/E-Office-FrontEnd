@@ -55,7 +55,7 @@ import {
   type UserFormData,
 } from "../../validators/employeeValidation";
 import { useDebounce } from "use-debounce";
-
+import "../../App.css";
 interface UserFormProps {
   user: UserFormData;
   onChange: (user: UserFormData) => void;

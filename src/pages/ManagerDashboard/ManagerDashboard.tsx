@@ -4,209 +4,610 @@ import {
   FiBriefcase,
   FiUsers,
   FiUser,
-  FiClock,
-  FiBarChart2,
   FiSettings,
   FiBell,
   FiSearch,
   FiPlus,
-  FiChevronDown,
   FiMenu,
   FiX,
+  FiLogOut,
+  FiClock,
 } from "react-icons/fi";
 import AddEntityModal from "../../components/AddEntity/AddEntityModal";
-import "../../App.css";
 import ProjectTimesheetView from "../../components/ProjectTimeSheetView/ProjectTimeSheet";
 import ProjectsView from "../../components/Projects/Projects";
 import ClientsView from "../../components/clients/Clients";
 import EmployeesView from "../../components/employees/Employee";
 import Settings from "../../components/Setting/Setting";
-
-// Type definitions
-interface Project {
-  id: string;
-  name: string;
-  client: string;
-  status: "active" | "pending" | "completed";
-  startDate: string;
-  estimatedTime: string;
-  teamLead: string;
-  teamMembers: string[];
-}
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  billingAddress: string;
-  shippingAddress: string;
-  projects: string[];
-  currency: string;
-}
-
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  projects: string[];
-}
-
-interface TimeEntry {
-  id: string;
-  employee: string;
-  project: string;
-  date: string;
-  hours: number;
-  description: string;
-  task: string;
-}
-
-interface Deliverable {
-  id: string;
-  date: string;
-  description: string;
-  notes: string;
-}
+import { useGetClients, useAddClient } from "../../hooks/useClient";
+import { useGetProjects, useAddProject } from "../../hooks/useProject";
+import {
+  useEmployees,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+} from "../../hooks/useEmployee";
+import { useManagerDashboardStats } from "../../hooks/useManager";
+import { useAuthLogout } from "../../hooks/useAuth";
+import type { Client, Project, User, TimeEntry } from "../../types/index";
+import { useAuthStore } from "../../store/authStore";
+import { useNavigate } from "react-router-dom";
 
 interface EntityConfig {
-  type: "client" | "project" | "employee";
+  type: "client" | "project" | "employee" | "deliverable";
   title: string;
   fields: any[];
   onSubmit: (data: any) => void;
   initialData?: any;
 }
 
-// Define configs with explicit types to match EntityConfig
-const projectConfig: EntityConfig = {
-  type: "project",
-  title: "Project",
-  fields: [
-    {
-      name: "name",
-      label: "Project Name",
-      type: "text",
-      placeholder: "Enter project name",
-      required: true,
+const ManagerDashboard: React.FC = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState<EntityConfig | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const { mutate: logout } = useAuthLogout();
+
+  // Fetch data
+  const { data: clientsData = [], isLoading: clientsLoading } = useGetClients();
+  const { data: projectsData = [], isLoading: projectsLoading } =
+    useGetProjects();
+  const { data: employeesData, isLoading: employeesLoading } = useEmployees();
+  const { data: statsData, isLoading: statsLoading } =
+    useManagerDashboardStats();
+  const { mutate: addClient } = useAddClient();
+  const { mutate: addProject } = useAddProject();
+  const { mutate: createUser } = useCreateUser();
+  const { mutate: updateUser } = useUpdateUser();
+  const { mutate: deleteUser } = useDeleteUser();
+
+  const clients = clientsData as Client[];
+  const projects = projectsData as Project[];
+  const employees = (employeesData?.users || []) as User[];
+  const stats = statsData || {
+    projects: 0,
+    clients: 0,
+    employees: 0,
+  };
+
+  // Navigation items
+  const navItems = [
+    { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
+    { id: "projects", label: "Projects", icon: <FiBriefcase /> },
+    { id: "clients", label: "Clients", icon: <FiUsers /> },
+    { id: "employees", label: "Employees", icon: <FiUser /> },
+    { id: "settings", label: "Settings", icon: <FiSettings /> },
+  ];
+
+  // Modal configs
+  const projectConfig: EntityConfig = {
+    type: "project",
+    title: "Project",
+    fields: [
+      {
+        name: "name",
+        label: "Project Name",
+        type: "text",
+        placeholder: "Enter project name",
+        required: true,
+      },
+      {
+        name: "client",
+        label: "Client",
+        type: "select",
+        placeholder: "Select client",
+        options: clients.map((client) => ({
+          value: client._id,
+          label: client.name,
+        })),
+        required: true,
+      },
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        placeholder: "Select status",
+        options: ["active", "pending", "completed"].map((status) => ({
+          value: status,
+          label: status.charAt(0).toUpperCase() + status.slice(1),
+        })),
+        required: true,
+      },
+      {
+        name: "startDate",
+        label: "Start Date",
+        type: "date",
+        placeholder: "YYYY-MM-DD",
+        required: true,
+      },
+      {
+        name: "estimatedTime",
+        label: "Estimated Time",
+        type: "text",
+        placeholder: "e.g., 3 months",
+        required: true,
+      },
+      {
+        name: "teamLead",
+        label: "Team Lead",
+        type: "select",
+        placeholder: "Select team lead",
+        options: employees.map((employee) => ({
+          value: employee._id,
+          label: employee.name,
+        })),
+        required: true,
+      },
+      {
+        name: "teamMembers",
+        label: "Team Members",
+        type: "select",
+        placeholder: "Select team members",
+        options: employees.map((employee) => ({
+          value: employee._id,
+          label: employee.name,
+        })),
+        multiple: true,
+        required: false,
+      },
+    ],
+    onSubmit: (data) => {
+      addProject(
+        {
+          ...data,
+          teamMembers: data.teamMembers || [],
+        },
+        {
+          onSuccess: () => {
+            setShowAddModal(false);
+            setModalConfig(null);
+            setErrorMessage(null);
+          },
+          onError: (error: any) => {
+            setErrorMessage(
+              error.response?.data?.error || "Failed to add project"
+            );
+          },
+        }
+      );
     },
-    {
-      name: "client",
-      label: "Client",
-      type: "select",
-      placeholder: "Select client",
-      options: [],
-      required: true,
+  };
+
+  const clientConfig: EntityConfig = {
+    type: "client",
+    title: "Client",
+    fields: [
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        placeholder: "Enter client name",
+        required: true,
+      },
+      {
+        name: "email",
+        label: "Email",
+        type: "email",
+        placeholder: "Enter email",
+        required: true,
+      },
+      {
+        name: "phone",
+        label: "Phone",
+        type: "text",
+        placeholder: "Enter phone number",
+        required: true,
+      },
+      {
+        name: "country",
+        label: "Country",
+        type: "select",
+        placeholder: "Select country",
+        options: [], // Populated in AddEntityModal
+        required: true,
+      },
+      {
+        name: "currency",
+        label: "Currency",
+        type: "select",
+        placeholder: "Select currency",
+        options: [], // Populated in AddEntityModal
+        required: true,
+      },
+      {
+        name: "billingAddress",
+        label: "Billing Address",
+        type: "text",
+        placeholder: "Enter billing address",
+        required: true,
+      },
+      {
+        name: "shippingAddress",
+        label: "Shipping Address",
+        type: "text",
+        placeholder: "Enter shipping address",
+        required: true,
+      },
+    ],
+    onSubmit: (data) => {
+      addClient(data, {
+        onSuccess: () => {
+          setShowAddModal(false);
+          setModalConfig(null);
+          setErrorMessage(null);
+        },
+        onError: (error: any) => {
+          setErrorMessage(
+            error.response?.data?.error || "Failed to add client"
+          );
+        },
+      });
     },
-    {
-      name: "status",
-      label: "Status",
-      type: "select",
-      placeholder: "Select status",
-      options: ["active", "pending", "completed"],
-      required: true,
+  };
+
+  const employeeConfig: EntityConfig = {
+    type: "employee",
+    title: "Employee",
+    fields: [
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        placeholder: "Enter name",
+        required: true,
+      },
+      {
+        name: "email",
+        label: "Email",
+        type: "email",
+        placeholder: "Enter email",
+        required: true,
+      },
+      {
+        name: "phone",
+        label: "Phone",
+        type: "text",
+        placeholder: "Enter phone number",
+        required: false,
+      },
+      {
+        name: "role",
+        label: "Role",
+        type: "select",
+        placeholder: "Select role",
+        options: ["manager", "employee", "admin", "superadmin"].map((role) => ({
+          value: role,
+          label: role.charAt(0).toUpperCase() + role.slice(1),
+        })),
+        required: true,
+      },
+      {
+        name: "grade",
+        label: "Grade",
+        type: "number",
+        placeholder: "Enter grade",
+        required: false,
+      },
+      {
+        name: "designation",
+        label: "Designation",
+        type: "text",
+        placeholder: "Enter designation",
+        required: false,
+      },
+      {
+        name: "cnic",
+        label: "CNIC",
+        type: "text",
+        placeholder: "Enter CNIC",
+        required: false,
+      },
+      {
+        name: "projects",
+        label: "Projects",
+        type: "select",
+        placeholder: "Select projects",
+        options: projects.map((project) => ({
+          value: project._id,
+          label: project.name,
+        })),
+        multiple: true,
+        required: false,
+      },
+    ],
+    onSubmit: (data) => {
+      const payload = {
+        ...data,
+        projects: data.projects || [],
+      };
+      if (data._id) {
+        updateUser(
+          { id: data._id, data: payload },
+          {
+            onSuccess: () => {
+              setShowAddModal(false);
+              setModalConfig(null);
+              setErrorMessage(null);
+            },
+            onError: (error: any) => {
+              setErrorMessage(
+                error.response?.data?.error || "Failed to update employee"
+              );
+            },
+          }
+        );
+      } else {
+        createUser(payload, {
+          onSuccess: () => {
+            setShowAddModal(false);
+            setModalConfig(null);
+            setErrorMessage(null);
+          },
+          onError: (error: any) => {
+            setErrorMessage(
+              error.response?.data?.error || "Failed to add employee"
+            );
+          },
+        });
+      }
     },
-    {
-      name: "startDate",
-      label: "Start Date",
-      type: "date",
-      placeholder: "YYYY-MM-DD",
-      required: true,
-    },
-    {
-      name: "estimatedTime",
-      label: "Estimated Time",
-      type: "text",
-      placeholder: "e.g., 3 months",
-      required: true,
-    },
-    {
-      name: "teamLead",
-      label: "Team Lead",
-      type: "select",
-      placeholder: "Select team lead",
-      options: [],
-      required: true,
-    },
-    {
-      name: "teamMembers",
-      label: "Team Members",
-      type: "text",
-      placeholder: "Type to add team members",
-      required: false,
-    },
-  ],
-  onSubmit: () => {}, // Will be overridden
+  };
+
+  // Open add/edit modal
+  const openAddModal = (
+    type: "project" | "client" | "employee",
+    initialData?: any
+  ) => {
+    setModalConfig(
+      type === "project"
+        ? { ...projectConfig, initialData }
+        : type === "client"
+        ? { ...clientConfig, initialData }
+        : { ...employeeConfig, initialData }
+    );
+    setShowAddModal(true);
+    setErrorMessage(null);
+  };
+
+  // Handle edit
+  const handleEditProject = (id: string, data: Partial<Project>) => {
+    openAddModal("project", {
+      ...data,
+      teamMembers: data.teamMembers || [],
+    });
+  };
+
+  const handleEditClient = (client: Client) => {
+    openAddModal("client", client);
+  };
+
+  const handleEditEmployee = (employee: User) => {
+    openAddModal("employee", {
+      ...employee,
+      projects: employee.projects || [],
+    });
+  };
+
+  // Handle delete employee
+  const handleDeleteEmployee = (id: string) => {
+    deleteUser(id, {
+      onSuccess: () => setErrorMessage(null),
+      onError: (error: any) => {
+        setErrorMessage(
+          error.response?.data?.error || "Failed to delete employee"
+        );
+      },
+    });
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+  };
+
+  // Render main content
+  const renderMainContent = () => {
+    if (clientsLoading || projectsLoading || employeesLoading || statsLoading) {
+      return <div className="p-6">Loading...</div>;
+    }
+
+    if (activeView.startsWith("timesheet-")) {
+      const projectId = activeView.split("timesheet-")[1];
+      const project = projects.find((p) => p._id === projectId);
+      if (!project) {
+        return (
+          <div className="p-6 bg-card rounded-xl shadow-lg">
+            <h1 className="text-2xl font-bold text-foreground">
+              Project not found
+            </h1>
+            <button
+              onClick={() => setActiveView("projects")}
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              Back to Projects
+            </button>
+          </div>
+        );
+      }
+      return (
+        <ProjectTimesheetView
+          project={{ _id: project._id, name: project.name }}
+          timeEntries={[]} // TODO: Replace with useGetTimeEntries
+          onAddDeliverable={(deliverable) =>
+            console.log("Add deliverable:", deliverable)
+          }
+        />
+      );
+    }
+
+    switch (activeView) {
+      case "dashboard":
+        return (
+          <DashboardView
+            projects={projects}
+            clients={clients}
+            employees={employees}
+            timeEntries={[]}
+            stats={stats}
+            onAddProject={() => openAddModal("project")}
+            onAddClient={() => openAddModal("client")}
+            onEditProject={handleEditProject}
+            setActiveView={setActiveView}
+          />
+        );
+      case "projects":
+        return (
+          <ProjectsView
+            projects={projects}
+            onEditProject={handleEditProject}
+            timeEntries={[]}
+            onAddDeliverable={(deliverable) =>
+              console.log("Add deliverable:", deliverable)
+            }
+            setActiveView={setActiveView}
+          />
+        );
+      case "clients":
+        return (
+          <ClientsView clients={clients} onEditClient={handleEditClient} />
+        );
+      case "employees":
+        return (
+          <EmployeesView
+            employees={employees}
+            projects={projects} // Pass projects to EmployeesView
+            onEditEmployee={handleEditEmployee}
+            onDeleteEmployee={handleDeleteEmployee}
+          />
+        );
+      case "settings":
+        return <Settings />;
+      default:
+        return (
+          <DashboardView
+            projects={projects}
+            clients={clients}
+            employees={employees}
+            timeEntries={[]}
+            stats={stats}
+            onAddProject={() => openAddModal("project")}
+            onAddClient={() => openAddModal("client")}
+            onEditProject={handleEditProject}
+            setActiveView={setActiveView}
+          />
+        );
+    }
+  };
+
+  if (!isAuthenticated) {
+    navigate("/login");
+    return null;
+  }
+
+  return (
+    <div className="dashboard-container">
+      {errorMessage && (
+        <div className="fixed top-4 right-4 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg shadow-lg flex items-center">
+          <FiX className="mr-2" />
+          {errorMessage}
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="ml-4 text-destructive-foreground hover:text-white"
+          >
+            <FiX size={16} />
+          </button>
+        </div>
+      )}
+      <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+        <div className="sidebar-header">
+          <div className="logo">
+            <FiBriefcase className="logo-icon" />
+            <span>ProjectFlow</span>
+          </div>
+          <button
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <FiX />
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeView === item.id ? "active" : ""}`}
+              onClick={() => setActiveView(item.id)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="main-content">
+        <div className="top-nav">
+          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
+            <FiMenu />
+          </button>
+          <div className="search-box">
+            <FiSearch className="search-icon" />
+            <input type="text" placeholder="Search..." />
+          </div>
+          <div className="user-menu">
+            <div className="notifications">
+              <FiBell />
+              <span className="notification-badge">3</span>
+            </div>
+            <div className="user-profile">
+              <div className="avatar">{user?.name?.charAt(0) || "U"}</div>
+              <div className="user-info">
+                <div className="user-name">{user?.name || "User"}</div>
+                <div className="user-role">
+                  {user?.role.replace("_", " ").toUpperCase()}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-muted-foreground hover:text-foreground"
+              >
+                <FiLogOut className="mr-2" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="content-area">{renderMainContent()}</div>
+      </div>
+      {showAddModal && modalConfig && (
+        <AddEntityModal
+          config={modalConfig}
+          onClose={() => {
+            setShowAddModal(false);
+            setModalConfig(null);
+            setErrorMessage(null);
+          }}
+        />
+      )}
+    </div>
+  );
 };
 
-const clientConfig: EntityConfig = {
-  type: "client",
-  title: "Client",
-  fields: [
-    {
-      name: "name",
-      label: "Name",
-      type: "text",
-      placeholder: "Enter client name",
-      required: true,
-    },
-    {
-      name: "email",
-      label: "Email",
-      type: "email",
-      placeholder: "Enter email",
-      required: true,
-    },
-    {
-      name: "phone",
-      label: "Phone",
-      type: "text",
-      placeholder: "Enter phone number",
-      required: true,
-    },
-    {
-      name: "country",
-      label: "Country",
-      type: "text",
-      placeholder: "Enter country",
-      required: true,
-    },
-    {
-      name: "billingAddress",
-      label: "Billing Address",
-      type: "text",
-      placeholder: "Enter billing address",
-      required: true,
-    },
-    {
-      name: "shippingAddress",
-      label: "Shipping Address",
-      type: "text",
-      placeholder: "Enter shipping address",
-      required: true,
-    },
-    {
-      name: "currency",
-      label: "Currency",
-      type: "select",
-      placeholder: "Select currency",
-      options: ["USD", "CAD", "EUR"],
-      required: true,
-    },
-  ],
-  onSubmit: () => {}, // Will be overridden
-};
-
-// Dashboard View Component
 interface DashboardViewProps {
   projects: Project[];
   clients: Client[];
-  employees: Employee[];
+  employees: User[];
   timeEntries: TimeEntry[];
+  stats: {
+    projects: number;
+    clients: number;
+    employees: number;
+  };
   onAddProject: () => void;
   onAddClient: () => void;
-  onEditProject: (id: string, data: any) => void;
+  onEditProject: (id: string, data: Partial<Project>) => void;
   setActiveView: (view: string) => void;
 }
 
@@ -215,6 +616,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   clients,
   employees,
   timeEntries,
+  stats,
   onAddProject,
   onAddClient,
   onEditProject,
@@ -233,53 +635,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Stats Grid */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon projects">
             <FiBriefcase />
           </div>
           <div className="stat-info">
-            <h3>{projects.length}</h3>
+            <h3>{stats.projects}</h3>
             <p>Active Projects</p>
           </div>
         </div>
-
         <div className="stat-card">
           <div className="stat-icon clients">
             <FiUsers />
           </div>
           <div className="stat-info">
-            <h3>{clients.length}</h3>
+            <h3>{stats.clients}</h3>
             <p>Clients</p>
           </div>
         </div>
-
         <div className="stat-card">
           <div className="stat-icon employees">
             <FiUser />
           </div>
           <div className="stat-info">
-            <h3>{employees.length}</h3>
+            <h3>{stats.employees}</h3>
             <p>Employees</p>
           </div>
         </div>
-
-        <div className="stat-card">
-          <div className="stat-icon hours">
-            <FiClock />
-          </div>
-          <div className="stat-info">
-            <h3>
-              {timeEntries.reduce((total, entry) => total + entry.hours, 0)}
-            </h3>
-            <p>Hours This Week</p>
-          </div>
-        </div>
       </div>
-
-      {/* Projects and Clients Section */}
       <div className="dashboard-content-grid">
         <div className="content-column">
           <div className="card">
@@ -289,13 +673,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="card-content">
               {projects.slice(0, 3).map((project) => (
                 <div
-                  key={project.id}
+                  key={project._id}
                   className="list-item cursor-pointer hover:bg-muted/50"
                   onClick={() => setActiveView("projects")}
                 >
                   <div className="item-info">
                     <h4>{project.name}</h4>
-                    <p>Client: {project.client}</p>
+                    <p>
+                      Client:{" "}
+                      {typeof project.client === "string"
+                        ? project.client
+                        : project.client.name}
+                    </p>
                   </div>
                   <span className={`status-badge status-${project.status}`}>
                     {project.status}
@@ -305,7 +694,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         </div>
-
         <div className="content-column">
           <div className="card">
             <div className="card-header">
@@ -313,7 +701,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="card-content">
               {clients.slice(0, 3).map((client) => (
-                <div key={client.id} className="list-item">
+                <div key={client._id} className="list-item">
                   <div className="item-info">
                     <h4>{client.name}</h4>
                     <p>{client.projects.length} projects</p>
@@ -325,15 +713,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Recent Activity */}
       <div className="card">
         <div className="card-header">
           <h2>Recent Time Entries</h2>
         </div>
         <div className="card-content">
           {timeEntries.slice(0, 5).map((entry) => (
-            <div key={entry.id} className="activity-item">
+            <div key={entry._id} className="activity-item">
               <div className="activity-icon">
                 <FiClock />
               </div>
@@ -349,548 +735,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           ))}
         </div>
       </div>
-    </div>
-  );
-};
-
-// Timesheets View Component
-const TimesheetsView: React.FC<{ timeEntries: TimeEntry[] }> = ({
-  timeEntries,
-}) => (
-  <div className="view-container">
-    <h1>Timesheets</h1>
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-foreground">
-        <thead className="bg-muted">
-          <tr>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Employee
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Project
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Date
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Hours
-            </th>
-            <th className="px-4 py-3 font-semibold text-muted-foreground">
-              Description
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {timeEntries.length > 0 ? (
-            timeEntries.map((entry) => (
-              <tr
-                key={entry.id}
-                className="border-b border-border hover:bg-muted/50"
-              >
-                <td className="px-4 py-3">{entry.employee}</td>
-                <td className="px-4 py-3">{entry.project}</td>
-                <td className="px-4 py-3">{entry.date}</td>
-                <td className="px-4 py-3">{entry.hours.toFixed(2)}</td>
-                <td className="px-4 py-3">{entry.description}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={5}
-                className="px-4 py-3 text-center text-muted-foreground"
-              >
-                No time entries found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-// Main Dashboard Component
-const ManagerDashboard: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("dashboard");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState<EntityConfig | null>(null);
-
-  // Sample data
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "1",
-      name: "Website Redesign",
-      client: "TechCorp Inc.",
-      status: "active",
-      startDate: "2023-05-15",
-      estimatedTime: "3 months",
-      teamLead: "Sarah Johnson",
-      teamMembers: ["John Doe", "Emily Chen", "Michael Rodriguez"],
-    },
-    {
-      id: "2",
-      name: "Mobile App Development",
-      client: "Innovate Solutions",
-      status: "active",
-      startDate: "2023-06-10",
-      estimatedTime: "5 months",
-      teamLead: "David Kim",
-      teamMembers: ["Alex Turner", "Lisa Wang", "James Wilson"],
-    },
-  ]);
-
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: "1",
-      name: "TechCorp Inc.",
-      email: "contact@techcorp.com",
-      phone: "+1-555-0123",
-      country: "United States",
-      billingAddress: "123 Tech Ave, San Francisco, CA 94103",
-      shippingAddress: "123 Tech Ave, San Francisco, CA 94103",
-      projects: ["Website Redesign"],
-      currency: "USD",
-    },
-    {
-      id: "2",
-      name: "Innovate Solutions",
-      email: "info@innovatesolutions.com",
-      phone: "+1-555-0456",
-      country: "Canada",
-      billingAddress: "456 Innovation Rd, Toronto, ON M5H 2N2",
-      shippingAddress: "456 Innovation Rd, Toronto, ON M5H 2N2",
-      projects: ["Mobile App Development"],
-      currency: "CAD",
-    },
-  ]);
-
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: "1",
-      name: "Sarah Johnson",
-      role: "Senior Developer",
-      email: "sarah@company.com",
-      projects: ["Website Redesign"],
-    },
-    {
-      id: "2",
-      name: "David Kim",
-      role: "Project Lead",
-      email: "david@company.com",
-      projects: ["Mobile App Development"],
-    },
-  ]);
-
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([
-    {
-      id: "1",
-      employee: "John Doe",
-      project: "Website Redesign",
-      date: "2023-07-10",
-      hours: 6.5,
-      description: "Implemented user authentication",
-      task: "Authentication",
-    },
-    {
-      id: "2",
-      employee: "Emily Chen",
-      project: "Website Redesign",
-      date: "2023-07-10",
-      hours: 7,
-      description: "Designed dashboard UI",
-      task: "UI Design",
-    },
-    {
-      id: "3",
-      employee: "Alex Turner",
-      project: "Mobile App Development",
-      date: "2023-07-11",
-      hours: 5,
-      description: "Developed login screen",
-      task: "Login Screen",
-    },
-    {
-      id: "4",
-      employee: "Lisa Wang",
-      project: "Mobile App Development",
-      date: "2023-07-12",
-      hours: 4.5,
-      description: "Implemented API integration",
-      task: "API Integration",
-    },
-  ]);
-
-  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-
-  // Navigation items
-  const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
-    { id: "projects", label: "Projects", icon: <FiBriefcase /> },
-    { id: "clients", label: "Clients", icon: <FiUsers /> },
-    { id: "employees", label: "Employees", icon: <FiUser /> },
-    // { id: "timesheets", label: "Timesheets", icon: <FiClock /> },
-    // { id: "reports", label: "Reports", icon: <FiBarChart2 /> },
-    { id: "settings", label: "Settings", icon: <FiSettings /> },
-  ];
-
-  // Employee configuration for modal
-  const employeeConfig: EntityConfig = {
-    type: "employee",
-    title: "Employee",
-    fields: [
-      {
-        name: "name",
-        label: "Name",
-        type: "text",
-        placeholder: "Enter name",
-        required: true,
-      },
-      {
-        name: "role",
-        label: "Role",
-        type: "text",
-        placeholder: "Enter role",
-        required: true,
-      },
-      {
-        name: "email",
-        label: "Email",
-        type: "email",
-        placeholder: "Enter email",
-        required: true,
-      },
-      {
-        name: "projects",
-        label: "Projects",
-        type: "select",
-        placeholder: "Select projects",
-        options: projects.map((project) => project.name),
-        required: false,
-      },
-    ],
-    onSubmit: (data) => {
-      if (data.id) {
-        // Update existing employee
-        setEmployees((prev) =>
-          prev.map((emp) =>
-            emp.id === data.id
-              ? {
-                  ...emp,
-                  ...data,
-                  projects: data.projects ? [data.projects] : emp.projects,
-                }
-              : emp
-          )
-        );
-      } else {
-        // Add new employee
-        setEmployees((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: String(prev.length + 1),
-            projects: data.projects ? [data.projects] : [],
-          },
-        ]);
-      }
-    },
-  };
-
-  // Open add/edit modal with specific configuration
-  const openAddModal = (
-    type: "project" | "client" | "employee",
-    initialData?: any
-  ) => {
-    setModalConfig(
-      type === "project"
-        ? { ...updatedProjectConfig, initialData }
-        : type === "client"
-        ? { ...updatedClientConfig, initialData }
-        : { ...updatedEmployeeConfig, initialData }
-    );
-    setShowAddModal(true);
-  };
-
-  // Handle form submission
-  const handleAddSubmit = (data: any) => {
-    if (modalConfig?.type === "project") {
-      if (data.id) {
-        // Update existing project
-        setProjects((prev) =>
-          prev.map((project) =>
-            project.id === data.id
-              ? {
-                  ...project,
-                  ...data,
-                  teamMembers: data.teamMembers
-                    ? data.teamMembers.split(", ").filter(Boolean)
-                    : project.teamMembers,
-                }
-              : project
-          )
-        );
-      } else {
-        // Add new project
-        setProjects((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: String(prev.length + 1),
-            teamMembers: data.teamMembers
-              ? data.teamMembers.split(", ").filter(Boolean)
-              : [],
-          },
-        ]);
-      }
-    } else if (modalConfig?.type === "client") {
-      if (data.id) {
-        // Update existing client
-        setClients((prev) =>
-          prev.map((client) =>
-            client.id === data.id
-              ? { ...client, ...data, projects: client.projects }
-              : client
-          )
-        );
-      } else {
-        // Add new client
-        setClients((prev) => [
-          ...prev,
-          {
-            ...data,
-            id: String(prev.length + 1),
-            projects: [],
-          },
-        ]);
-      }
-    } else if (modalConfig?.type === "employee") {
-      employeeConfig.onSubmit(data);
-    }
-    setShowAddModal(false);
-    setModalConfig(null);
-  };
-
-  // Handle project edit
-  const handleEditProject = (id: string, data: any) => {
-    openAddModal("project", {
-      ...data,
-      teamMembers: data.teamMembers.join(", "),
-    });
-  };
-
-  // Handle client edit
-  const handleEditClient = (client: Client) => {
-    openAddModal("client", client);
-  };
-
-  // Handle employee edit
-  const handleEditEmployee = (employee: Employee) => {
-    openAddModal("employee", employee);
-  };
-
-  // Handle add deliverable
-  const handleAddDeliverable = (deliverable: Deliverable) => {
-    setDeliverables((prev) => [...prev, deliverable]);
-  };
-
-  // Update modal configs with dynamic clients and employees
-  const updatedProjectConfig: EntityConfig = {
-    ...projectConfig,
-    fields: projectConfig.fields.map((field: any) =>
-      field.name === "client"
-        ? {
-            ...field,
-            options: clients.map((client) => client.name),
-          }
-        : field.name === "teamLead"
-        ? {
-            ...field,
-            options: employees.map((employee) => employee.name),
-          }
-        : field
-    ),
-    onSubmit: handleAddSubmit,
-  };
-
-  const updatedClientConfig: EntityConfig = {
-    ...clientConfig,
-    onSubmit: handleAddSubmit,
-  };
-
-  const updatedEmployeeConfig: EntityConfig = {
-    ...employeeConfig,
-    fields: employeeConfig.fields.map((field: any) =>
-      field.name === "projects"
-        ? {
-            ...field,
-            options: projects.map((project) => project.name),
-          }
-        : field
-    ),
-    onSubmit: handleAddSubmit,
-  };
-
-  // Render main content based on active view
-  const renderMainContent = () => {
-    if (activeView.startsWith("timesheet-")) {
-      const projectId = activeView.split("timesheet-")[1];
-      const project = projects.find((p) => p.id === projectId);
-      if (!project) {
-        return (
-          <div className="p-6 bg-card rounded-xl shadow-lg">
-            <h1 className="text-2xl font-bold text-foreground">
-              Project not found
-            </h1>
-            <button
-              onClick={() => setActiveView("projects")}
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              Back to Projects
-            </button>
-          </div>
-        );
-      }
-      return (
-        <ProjectTimesheetView
-          project={{ id: project.id, name: project.name }}
-          timeEntries={timeEntries}
-          onAddDeliverable={handleAddDeliverable}
-        />
-      );
-    }
-
-    switch (activeView) {
-      case "dashboard":
-        return (
-          <DashboardView
-            projects={projects}
-            clients={clients}
-            employees={employees}
-            timeEntries={timeEntries}
-            onAddProject={() => openAddModal("project")}
-            onAddClient={() => openAddModal("client")}
-            onEditProject={handleEditProject}
-            setActiveView={setActiveView}
-          />
-        );
-      case "projects":
-        return (
-          <ProjectsView
-            projects={projects}
-            onEditProject={handleEditProject}
-            timeEntries={timeEntries}
-            onAddDeliverable={handleAddDeliverable}
-            setActiveView={setActiveView}
-          />
-        );
-      case "clients":
-        return (
-          <ClientsView clients={clients} onEditClient={handleEditClient} />
-        );
-      case "employees":
-        return (
-          <EmployeesView
-            employees={employees}
-            onEditEmployee={handleEditEmployee}
-          />
-        );
-      case "timesheets":
-        return <TimesheetsView timeEntries={timeEntries} />;
-      case "settings":
-        return <Settings />;
-      default:
-        return (
-          <DashboardView
-            projects={projects}
-            clients={clients}
-            employees={employees}
-            timeEntries={timeEntries}
-            onAddProject={() => openAddModal("project")}
-            onAddClient={() => openAddModal("client")}
-            onEditProject={handleEditProject}
-            setActiveView={setActiveView}
-          />
-        );
-    }
-  };
-
-  return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FiBriefcase className="logo-icon" />
-            <span>ProjectFlow</span>
-          </div>
-          <button
-            className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <FiX />
-          </button>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeView === item.id ? "active" : ""}`}
-              onClick={() => setActiveView(item.id)}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        {/* Top Navigation */}
-        <div className="top-nav">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-            <FiMenu />
-          </button>
-
-          <div className="search-box">
-            <FiSearch className="search-icon" />
-            <input type="text" placeholder="Search..." />
-          </div>
-
-          <div className="user-menu">
-            <div className="notifications">
-              <FiBell />
-              <span className="notification-badge">3</span>
-            </div>
-
-            <div className="user-profile">
-              <div className="avatar">M</div>
-              <div className="user-info">
-                <div className="user-name">Manager User</div>
-                <div className="user-role">Manager</div>
-              </div>
-              <FiChevronDown />
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Content */}
-        <div className="content-area">{renderMainContent()}</div>
-      </div>
-
-      {/* Add Modal */}
-      {showAddModal && modalConfig && (
-        <AddEntityModal
-          config={modalConfig}
-          onClose={() => {
-            setShowAddModal(false);
-            setModalConfig(null);
-          }}
-        />
-      )}
     </div>
   );
 };
