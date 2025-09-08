@@ -7,6 +7,7 @@ import {
   deleteUser,
   type User,
 } from "../apis/employeeService";
+
 import { toast } from "react-toastify";
 
 // ✅ Fetch employees
@@ -40,13 +41,16 @@ export const useCreateUser = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
+      // ✅ Correct query key for manager dashboard stats
+      queryClient.invalidateQueries({ queryKey: ["managerDashboardStats"] });
+            console.log('Current queries:', queryClient.getQueryCache().getAll());
+
     },
     onError: (error: Error) => {
       toast.error(`Failed to add user: ${error.message}`);
     },
   });
 };
-
 // ✅ Update employee
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();

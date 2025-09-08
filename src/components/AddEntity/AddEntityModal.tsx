@@ -29,8 +29,8 @@ interface EntityConfig {
   type: "client" | "project" | "employee" | "deliverable";
   title: string;
   fields: FormField[];
-  onSubmit: (data: any) => void;
-  initialData?: any;
+  onSubmit: (data: unknown) => void;
+  initialData?: unknown;
 }
 
 interface AddEntityModalProps {
@@ -45,6 +45,11 @@ interface CustomSelectProps {
   multiple?: boolean;
   placeholder?: string;
   icon?: React.ReactNode;
+}
+
+// Define form data interface to fix TypeScript error
+interface FormData {
+  [key: string]: string | string[] | undefined;
 }
 
 const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -171,7 +176,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 };
 
 const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
-  const [formData, setFormData] = useState<{ [key: string]: any }>({});
+  const [formData, setFormData] = useState<FormData>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [countryOptions] = useState<{ value: string; label: string }[]>(
@@ -195,6 +200,11 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
   );
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Add useEffect to log formData changes
+  useEffect(() => {
+    console.log("📊 Form data updated:", formData);
+  }, [formData]);
+
   // Utility function to format date to YYYY-MM-DD
   const formatDateToYYYYMMDD = (date: string | Date | undefined): string => {
     if (!date) return "";
@@ -209,13 +219,13 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
   useEffect(() => {
     const initialData = config.initialData || {};
     const newFormData = config.fields.reduce((acc, field) => {
-      let initialValue = initialData[field.name];
+      let initialValue = (initialData as FormData)[field.name];
       if (
         field.name === "teamLead" &&
         typeof initialValue === "object" &&
         initialValue?._id
       ) {
-        initialValue = initialValue._id;
+        initialValue = (initialValue as any)._id;
       } else if (
         (field.name === "teamMembers" || field.name === "projects") &&
         Array.isArray(initialValue)
@@ -224,11 +234,11 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
           typeof item === "object" && item?._id ? item._id : item
         );
       } else if (field.name === "startDate") {
-        initialValue = formatDateToYYYYMMDD(initialValue);
+        initialValue = formatDateToYYYYMMDD(initialValue as string | Date);
       }
       acc[field.name] = initialValue ?? (field.multiple ? [] : "");
       return acc;
-    }, {} as { [key: string]: any });
+    }, {} as FormData);
 
     if (newFormData.country && !newFormData.currency) {
       const selectedCountry = countries.find(
@@ -236,6 +246,7 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
       );
       if (selectedCountry) {
         newFormData.currency = selectedCountry.currencyCode;
+        newFormData.phone = selectedCountry.phoneCode;
       }
     }
 
@@ -262,23 +273,44 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
     >
   ) => {
     const { name, value } = e.target;
+    
+    console.log(`🔍 Field changed: ${name} = ${value}`);
+    console.log(`📋 Current formData:`, formData);
+    
     if (name === "country") {
+      console.log(`🌍 Country selected: ${value}`);
       const selectedCountry = countries.find((c) => c.name === value);
+      console.log("✅ Found country:", selectedCountry);
+      
       if (selectedCountry) {
+        console.log(`💰 Auto-setting currency to: ${selectedCountry.currencyCode}`);
+        console.log(`📞 Auto-setting phone code to: ${selectedCountry.phoneCode}`);
+        
         setFormData((prev) => ({
           ...prev,
           country: value,
           currency: selectedCountry.currencyCode,
-          phone:
-            selectedCountry.phoneCode +
-            (prev.phone || "").replace(/^\+\d+/, ""),
+          phone: selectedCountry.phoneCode,
         }));
+        
+        // Log the updated state after a brief delay to allow state to update
+        setTimeout(() => {
+          console.log("🔄 Updated formData after country selection:", formData);
+        }, 100);
       } else {
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        console.log("❌ Country not found in countries list");
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          currency: "",
+          phone: "",
+        }));
       }
     } else {
+      console.log(`📝 Regular field update: ${name} = ${value}`);
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
+    
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -293,30 +325,37 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
       if (
         field.name === "email" &&
         formData.email &&
-        !/\S+@\S+\.\S+/.test(formData.email)
+        !/\S+@\S+\.\S+/.test(formData.email as string)
       ) {
         newErrors.email = "Invalid email format";
       }
       if (
         field.name === "phone" &&
         formData.phone &&
-        !/^\+\d{7,15}$/.test(formData.phone)
+        !/^\+\d{7,15}$/.test(formData.phone as string)
       ) {
         newErrors.phone = "Invalid phone number (7-15 digits)";
       }
       if (
         field.name === "startDate" &&
         formData.startDate &&
-        !/^\d{4}-\d{2}-\d{2}$/.test(formData.startDate)
+        !/^\d{4}-\d{2}-\d{2}$/.test(formData.startDate as string)
       ) {
         newErrors.startDate = "Invalid date format (YYYY-MM-DD)";
       }
       if (
         field.name === "cnic" &&
         formData.cnic &&
-        !/^\d{5}-\d{7}-\d$/.test(formData.cnic)
+        !/^\d{5}-\d{7}-\d$/.test(formData.cnic as string)
       ) {
         newErrors.cnic = "Invalid CNIC format (e.g., 12345-1234567-1)";
+      }
+      if (
+        field.name === "country" &&
+        formData.country &&
+        !countries.some((c) => c.name === formData.country)
+      ) {
+        newErrors.country = "Invalid country selection";
       }
     });
     setErrors(newErrors);
@@ -344,7 +383,7 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
           <div className="relative">
             <textarea
               name={field.name}
-              value={formData[field.name] || ""}
+              value={formData[field.name] as string || ""}
               onChange={handleChange}
               placeholder={field.placeholder}
               className={`${commonClasses} ${errorClasses} pl-10 h-24 resize-none`}
@@ -358,55 +397,82 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
           </div>
         );
       case "select":
-        const selectOptions =
-          field.options?.map((opt) =>
+        { 
+          const selectOptions = field.options?.map((opt) =>
             typeof opt === "string" ? { value: opt, label: opt } : opt
           ) || [];
-        const selectIcon =
-          field.name === "country" ? (
-            <FiGlobe size={18} />
-          ) : field.name === "currency" ? (
-            <FiDollarSign size={18} />
-          ) : field.name === "client" ? (
-            <FiUsers size={18} />
-          ) : field.name === "status" ? (
-            <FiClock size={18} />
-          ) : field.name === "teamLead" ? (
-            <FiUser size={18} />
-          ) : field.name === "teamMembers" ? (
-            <FiUsers size={18} />
-          ) : field.name === "role" ? (
-            <FiUser size={18} />
-          ) : field.name === "projects" ? (
-            <FiBriefcase size={18} />
-          ) : null;
+          
+          const selectIcon =
+            field.name === "country" ? (
+              <FiGlobe size={18} />
+            ) : field.name === "currency" ? (
+              <FiDollarSign size={18} />
+            ) : field.name === "client" ? (
+              <FiUsers size={18} />
+            ) : field.name === "status" ? (
+              <FiClock size={18} />
+            ) : field.name === "teamLead" ? (
+              <FiUser size={18} />
+            ) : field.name === "teamMembers" ? (
+              <FiUsers size={18} />
+            ) : field.name === "role" ? (
+              <FiUser size={18} />
+            ) : field.name === "projects" ? (
+              <FiBriefcase size={18} />
+            ) : null;
 
-        return (
-          <div className="relative">
-            <CustomSelect
-              options={selectOptions}
-              value={
-                field.multiple
-                  ? formData[field.name] || []
-                  : formData[field.name] || ""
-              }
-              onChange={(val) => {
-                setFormData((prev) => ({ ...prev, [field.name]: val }));
-                if (errors[field.name]) {
-                  setErrors((prev) => ({ ...prev, [field.name]: "" }));
+          return (
+            <div className="relative">
+              <CustomSelect
+                options={selectOptions}
+                value={
+                  field.multiple
+                    ? formData[field.name] as string[] || []
+                    : formData[field.name] as string || ""
                 }
-              }}
-              multiple={field.multiple}
-              placeholder={field.placeholder || `Select ${field.label}`}
-              icon={selectIcon}
-            />
-            {errors[field.name] && (
-              <p className="text-destructive text-sm mt-2 flex items-center">
-                <FiX size={14} className="mr-1" /> {errors[field.name]}
-              </p>
-            )}
-          </div>
-        );
+                onChange={(val) => {
+                  console.log(`🎯 CustomSelect onChange for ${field.name}:`, val);
+                  
+                  // For country field, we need to manually trigger the handleChange logic
+                  if (field.name === "country") {
+                    const selectedCountry = countries.find((c) => c.name === val);
+                    console.log("🌍 Country selected via CustomSelect:", selectedCountry);
+                    
+                    if (selectedCountry) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        country: val as string,
+                        currency: selectedCountry.currencyCode,
+                        phone: selectedCountry.phoneCode,
+                      }));
+                    } else {
+                      setFormData((prev) => ({
+                        ...prev,
+                        [field.name]: val,
+                        currency: "",
+                        phone: "",
+                      }));
+                    }
+                  } else {
+                    setFormData((prev) => ({ ...prev, [field.name]: val }));
+                  }
+                  
+                  if (errors[field.name]) {
+                    setErrors((prev) => ({ ...prev, [field.name]: "" }));
+                  }
+                }}
+                multiple={field.multiple}
+                placeholder={field.placeholder || `Select ${field.label}`}
+                icon={selectIcon}
+              />
+              {errors[field.name] && (
+                <p className="text-destructive text-sm mt-2 flex items-center">
+                  <FiX size={14} className="mr-1" /> {errors[field.name]}
+                </p>
+              )}
+            </div>
+          ); 
+        }
       default:
         return (
           <div className="relative">
@@ -434,7 +500,7 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
             <input
               type={field.type}
               name={field.name}
-              value={field.name === "startDate" ? formData[field.name] || "" : formData[field.name] || ""}
+              value={field.name === "startDate" ? formData[field.name] as string || "" : formData[field.name] as string || ""}
               onChange={handleChange}
               placeholder={field.placeholder}
               className={`${commonClasses} ${errorClasses} pl-10`}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import {
   addClient,
@@ -10,10 +10,15 @@ import {
 import type { Client } from "../types/client";
 
 export const useAddClient = () => {
+    const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: addClient,
-    onSuccess: (data: Client) => {
+    onSuccess: () => {
       toast.success("Client added successfully!");
+      queryClient.invalidateQueries({ queryKey: ["managerDashboardStats"] });
+      queryClient.invalidateQueries({queryKey:["clients"]})
+            console.log('Current queries:', queryClient.getQueryCache().getAll());
     },
     onError: (error: Error) => {
       toast.error(`Failed to add client: ${error.message}`);
@@ -37,10 +42,14 @@ export const useGetClient = (id: string) => {
 };
 
 export const useUpdateClient = () => {
+      const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
       updateClient(id, data),
-    onSuccess: (data: Client) => {
+    onSuccess: () => {
+            queryClient.invalidateQueries({queryKey:["clients"]})
+
       toast.success("Client updated successfully!");
     },
     onError: (error: Error) => {
