@@ -35,6 +35,38 @@ export const getTimeEntries = async (
   }
 };
 
+export const getAllTimeEntries = async (
+  params: {
+    projectId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<{ timeEntries: TimeEntry[]; pagination: any }> => {
+  try {
+    const query = new URLSearchParams();
+    if (params.projectId) query.append("projectId", params.projectId);
+    if (params.dateFrom) query.append("dateFrom", params.dateFrom);
+    if (params.dateTo) query.append("dateTo", params.dateTo);
+    if (params.page) query.append("page", params.page.toString());
+    if (params.limit) query.append("limit", params.limit.toString());
+
+    const response = await apiClient.get(
+      `/api/projects/global/time-entries?${query.toString()}`
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      "Get all time entries error:",
+      JSON.stringify(error, null, 2)
+    );
+    throw new Error(
+      error.response?.data?.error || "Failed to fetch time entries"
+    );
+  }
+};
+
 export const getTimeEntry = async (
   projectId: string,
   timeEntryId: string
@@ -67,6 +99,24 @@ export const updateTimeEntry = async (
     console.error("Update time entry error:", JSON.stringify(error, null, 2));
     throw new Error(
       error.response?.data?.error || "Failed to update time entry"
+    );
+  }
+};
+
+export const approveTimeEntry = async (
+  timeEntryId: string,
+  approved: boolean
+): Promise<TimeEntry> => {
+  try {
+    const response = await apiClient.put(
+      `/api/time-entries/${timeEntryId}/approve`,
+      { approved }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("Approve time entry error:", JSON.stringify(error, null, 2));
+    throw new Error(
+      error.response?.data?.error || "Failed to approve time entry"
     );
   }
 };

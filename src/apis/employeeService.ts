@@ -12,7 +12,12 @@ export interface User {
   cnic: string;
   role: "employee" | "manager"; // 👈 Added role field
 }
-
+export interface DashboardStats {
+  activeProjects: number;
+  hoursLogged: number;
+  assignedTasks: number;
+  teamLeadProjects: number;
+}
 // ✅ Create user
 export const createUser = async (data: Omit<User, "_id">): Promise<User> => {
   try {
@@ -90,5 +95,16 @@ export const getDashboardStats = async () => {
       );
     }
     throw new Error("Failed to fetch dashboard stats");
+  }
+};
+export const getEmployeeDashboardStats = async (): Promise<DashboardStats> => {
+  try {
+    const response = await apiClient.get("/employee/stats");
+    return response.data;
+  } catch (error: any) {
+    console.error("Get dashboard stats error:", JSON.stringify(error, null, 2));
+    throw new Error(
+      error.response?.data?.error || "Failed to fetch dashboard stats"
+    );
   }
 };

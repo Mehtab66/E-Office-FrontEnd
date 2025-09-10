@@ -28,7 +28,7 @@ export const addProject = async (
 export const getProjects = async (
   page: number = 1,
   limit: number = 20
-): Promise<Project[]> => {
+): Promise<{ projects: Project[]; pagination: any }> => {
   try {
     const response = await apiClient.get(
       `/api/projects?page=${page}&limit=${limit}`
@@ -42,7 +42,7 @@ export const getProjects = async (
 
 export const getProject = async (id: string): Promise<Project> => {
   try {
-    const response = await apiClient.get(`/api/manager/projects/${id}`);
+    const response = await apiClient.get(`/api/projects/${id}`);
     return response.data;
   } catch (error: any) {
     console.error("Get project error:", JSON.stringify(error, null, 2));

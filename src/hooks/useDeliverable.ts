@@ -30,7 +30,7 @@ export const useCreateDeliverable = () => {
   });
 };
 
-export const useGetDeliverables = (projectId: string) => {
+export const useGetDeliverables = (projectId: string, p0: { enabled: boolean; }) => {
   return useQuery({
     queryKey: ["deliverables", projectId],
     queryFn: () => getDeliverables(projectId),

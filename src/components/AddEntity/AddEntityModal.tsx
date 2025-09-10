@@ -223,7 +223,8 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
       if (
         field.name === "teamLead" &&
         typeof initialValue === "object" &&
-        initialValue?._id
+        !Array.isArray(initialValue) &&
+        (initialValue as { _id?: string })._id
       ) {
         initialValue = (initialValue as any)._id;
       } else if (
@@ -231,7 +232,9 @@ const AddEntityModal: React.FC<AddEntityModalProps> = ({ config, onClose }) => {
         Array.isArray(initialValue)
       ) {
         initialValue = initialValue.map((item) =>
-          typeof item === "object" && item?._id ? item._id : item
+          typeof item === "object" && item !== null && "_id" in item
+            ? (item as { _id: string })._id
+            : item
         );
       } else if (field.name === "startDate") {
         initialValue = formatDateToYYYYMMDD(initialValue as string | Date);

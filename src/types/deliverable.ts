@@ -1,4 +1,7 @@
+import type { Key } from "react";
+
 export interface Deliverable {
+  id: Key | null | undefined;
   _id: string;
   project: string;
   date: string;

@@ -1,14 +1,18 @@
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "../store/authStore";
 import apiClient from "./apiClient";
 
 export interface Admin {
+  id?: string; // Matches API response
   _id: string;
   email: string;
   name?: string;
-  designation: string; // Added to match backend response
-  role: string;
+  designation: string;
+  role: string; // Allow any string to match API
 }
 
 export interface Employee {
+  id?: string; // Matches API response
   _id: string;
   name: string;
   email: string;
@@ -16,7 +20,7 @@ export interface Employee {
   grade: number;
   designation: string;
   cnic: string;
-  role: string;
+  role: string; // Allow any string to match API
   projects: string[];
 }
 
@@ -51,8 +55,6 @@ export const login = async (credentials: {
 
 export const logout = async (): Promise<void> => {
   try {
-    // Optional: If you have a backend logout endpoint, uncomment this
-    // await apiClient.post("/auth/logout");
     localStorage.removeItem("authToken");
   } catch (error: any) {
     console.error("Logout error:", JSON.stringify(error, null, 2));
@@ -68,4 +70,25 @@ export const logout = async (): Promise<void> => {
     }
     throw new Error(message);
   }
+};
+
+export const getCurrentUser = async (): Promise<Employee> => {
+  try {
+    const response = await apiClient.get("/auth/me");
+    return response.data;
+  } catch (error: any) {
+    console.error("Get current user error:", JSON.stringify(error, null, 2));
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch user details"
+    );
+  }
+};
+
+export const useCurrentUser = () => {
+  const { token } = useAuthStore();
+  return useQuery<Employee, Error>({
+    queryKey: ["currentUser"],
+    queryFn: getCurrentUser,
+    enabled: !!token,
+  });
 };

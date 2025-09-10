@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import {
-  FiEdit2,
   FiSearch,
   FiChevronDown,
   FiChevronUp,
-  FiTrash2,
   FiChevronLeft,
   FiChevronRight,
   FiUser,
@@ -22,8 +20,6 @@ interface EmployeesViewProps {
 const EmployeesView: React.FC<EmployeesViewProps> = ({
   employees: propEmployees,
   projects, // Added projects prop
-  onEditEmployee,
-  onDeleteEmployee,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof User>("name");
@@ -42,8 +38,13 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
     search: searchTerm,
   });
 
-  // Explicitly type employees as User[] to avoid User | User union
-  const employees: User[] = data?.users ?? propEmployees;
+  // Map API users to local User type by adding 'id' property if missing
+  const employees: User[] = data?.users
+    ? data.users.map((user: any) => ({
+        ...user,
+        id: user.id ?? user._id, // Ensure 'id' exists
+      }))
+    : propEmployees;
 
   const totalPages = data?.totalPages || 1;
   const currentPageFromData = data?.currentPage || currentPage;
@@ -138,7 +139,6 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
                       { key: "role", label: "Role" },
                       { key: "email", label: "Email" },
                       { key: "projects", label: "Projects" },
-                      { key: "", label: "Actions" },
                     ].map((header) => (
                       <th
                         key={header.key}
@@ -182,22 +182,6 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
                         <td className="px-4 py-3">{employee.email}</td>
                         <td className="px-4 py-3">
                           {getProjectNames(employee.projects || [])}
-                        </td>
-                        <td className="px-4 py-3 flex gap-2">
-                          <button
-                            onClick={() => onEditEmployee(employee)}
-                            className="text-primary hover:text-primary/80 transition-colors"
-                            aria-label={`Edit employee ${employee.name}`}
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            onClick={() => onDeleteEmployee(employee._id)}
-                            className="text-destructive hover:text-destructive/80 transition-colors"
-                            aria-label={`Delete employee ${employee.name}`}
-                          >
-                            <FiTrash2 />
-                          </button>
                         </td>
                       </tr>
                     ))

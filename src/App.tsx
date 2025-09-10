@@ -7,7 +7,8 @@ import ManagerDashboard from "./pages/ManagerDashboard/ManagerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard/EmployeDashboard";
 import { useAuthStore } from "./store/authStore";
 import type { JSX } from "react";
-
+import "./App.css";
+import "./index.css";
 function App() {
   const { isAuthenticated, user } = useAuthStore();
 

@@ -1,5 +1,5 @@
 import apiClient from "./apiClient";
-import type { Task } from "../types/task";
+import type { Task, Subtask } from "../types/task";
 
 export const createTask = async (
   projectId: string,
@@ -17,12 +17,56 @@ export const createTask = async (
   }
 };
 
+export const createSubtask = async (
+  projectId: string,
+  taskId: string,
+  data: Omit<Subtask, "_id" | "createdAt" | "updatedAt">
+): Promise<Subtask> => {
+  try {
+    const response = await apiClient.post(
+      `/api/projects/${projectId}/tasks/${taskId}/subtasks`,
+      data
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("Create subtask error:", JSON.stringify(error, null, 2));
+    throw new Error(error.response?.data?.error || "Failed to create subtask");
+  }
+};
+
 export const getTasks = async (projectId: string): Promise<Task[]> => {
   try {
     const response = await apiClient.get(`/api/projects/${projectId}/tasks`);
     return response.data;
   } catch (error: any) {
     console.error("Get tasks error:", JSON.stringify(error, null, 2));
+    throw new Error(error.response?.data?.error || "Failed to fetch tasks");
+  }
+};
+
+export const getAllTasks = async (
+  params: {
+    projectId?: string;
+    priority?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<{ tasks: Task[]; pagination: any }> => {
+  try {
+    const query = new URLSearchParams();
+    if (params.projectId) query.append("projectId", params.projectId);
+    if (params.priority) query.append("priority", params.priority);
+    if (params.status) query.append("status", params.status);
+    if (params.page) query.append("page", params.page.toString());
+    if (params.limit) query.append("limit", params.limit.toString());
+
+    const response = await apiClient.get(
+      `/api/projects/global/tasks?${query.toString()}`
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("Get all tasks error:", JSON.stringify(error, null, 2));
     throw new Error(error.response?.data?.error || "Failed to fetch tasks");
   }
 };

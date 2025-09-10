@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FiHome,
   FiBriefcase,
@@ -25,7 +25,6 @@ import {
   useEmployees,
   useCreateUser,
   useUpdateUser,
-  useDeleteUser,
 } from "../../hooks/useEmployee";
 import { useManagerDashboardStats } from "../../hooks/useManager";
 import { useAuthLogout } from "../../hooks/useAuth";
@@ -53,8 +52,10 @@ const ManagerDashboard: React.FC = () => {
 
   // Fetch data
   const { data: clientsData = [], isLoading: clientsLoading } = useGetClients();
-  const { data: projectsData = [], isLoading: projectsLoading } =
-    useGetProjects();
+  const { data: projectsData, isLoading: projectsLoading } = useGetProjects();
+  useEffect(() => {
+    console.log("Projects data:", projectsData);
+  }, [projectsData]);
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
   const { data: statsData, isLoading: statsLoading } =
     useManagerDashboardStats();
@@ -62,17 +63,22 @@ const ManagerDashboard: React.FC = () => {
   const { mutate: addProject } = useAddProject();
   const { mutate: createUser } = useCreateUser();
   const { mutate: updateUser } = useUpdateUser();
-  const { mutate: deleteUser } = useDeleteUser();
 
   const clients = clientsData as Client[];
-  const projects = projectsData as Project[];
   const employees = (employeesData?.users || []) as User[];
   const stats = statsData || {
     projects: 0,
     clients: 0,
     employees: 0,
   };
-
+  const projects = projectsData?.projects || [];
+  const pagination = projectsData?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalProjects: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  };
   // Navigation items
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
@@ -384,25 +390,6 @@ const ManagerDashboard: React.FC = () => {
     openAddModal("client", client);
   };
 
-  const handleEditEmployee = (employee: User) => {
-    openAddModal("employee", {
-      ...employee,
-      projects: employee.projects || [],
-    });
-  };
-
-  // Handle delete employee
-  const handleDeleteEmployee = (id: string) => {
-    deleteUser(id, {
-      onSuccess: () => setErrorMessage(null),
-      onError: (error: any) => {
-        setErrorMessage(
-          error.response?.data?.error || "Failed to delete employee"
-        );
-      },
-    });
-  };
-
   // Handle logout
   const handleLogout = () => {
     logout();
@@ -459,15 +446,21 @@ const ManagerDashboard: React.FC = () => {
           />
         );
       case "projects":
+        function setCurrentPage(page: number): void {
+          throw new Error("Function not implemented.");
+        }
+
         return (
           <ProjectsView
             projects={projects}
+            pagination={pagination}
             onEditProject={handleEditProject}
             timeEntries={[]}
             onAddDeliverable={(deliverable) =>
               console.log("Add deliverable:", deliverable)
             }
             setActiveView={setActiveView}
+            onPageChange={setCurrentPage} // Pass page change handler
           />
         );
       case "clients":
@@ -479,8 +472,6 @@ const ManagerDashboard: React.FC = () => {
           <EmployeesView
             employees={employees}
             projects={projects} // Pass projects to EmployeesView
-            onEditEmployee={handleEditEmployee}
-            onDeleteEmployee={handleDeleteEmployee}
           />
         );
       case "settings":
