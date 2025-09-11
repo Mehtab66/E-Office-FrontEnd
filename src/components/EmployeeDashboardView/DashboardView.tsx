@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   FiBriefcase,
   FiClock,
@@ -7,9 +7,10 @@ import {
   FiPlus,
 } from "react-icons/fi";
 import type { Project } from "../../types/project";
-import type{ TimeEntry } from "../../types/timeEntry";
-import type{ Task } from "../../types/task";
-import type{ Employee } from "../../apis/authService";
+import type { TimeEntry } from "../../types/timeEntry";
+import type { Task } from "../../types/task";
+import type { Employee } from "../../apis/authService";
+
 interface DashboardViewProps {
   employee: Employee;
   projects: Project[];
@@ -27,10 +28,30 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   setActiveView,
   onAddTime,
 }) => {
+  useEffect(() => {
+    console.log("DashboardView rendered");
+    console.log("Projects in the Dashboard View:", projects);
+    console.log("Tasks in the Dashboard View:", tasks);
+    console.log("Time Entries in the Dashboard View:", timeEntries);
+  }, [projects, tasks, timeEntries]);
+
   const totalHours = timeEntries.reduce(
     (total, entry) => total + entry.hours,
     0
   );
+
+  // Get employee ID (handling both _id and id)
+  const employeeId = (employee as any)._id || employee.id;
+
+  // Count projects where the employee is team lead
+  const teamLeadProjectsCount = projects.filter((project) => {
+    const teamLeadId =
+      typeof project.teamLead === "string"
+        ? project.teamLead
+        : (project.teamLead as any)?._id || (project.teamLead as any)?.id;
+
+    return teamLeadId === employeeId;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -110,8 +131,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-gray-600 text-sm">
               Team lead on{" "}
               <span className="font-medium">
-                {projects.filter((p) => p.teamLead === employee.id).length}{" "}
-                projects
+                {teamLeadProjectsCount} projects
               </span>
             </p>
           </div>

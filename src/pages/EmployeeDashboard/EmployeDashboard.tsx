@@ -38,7 +38,7 @@ const getEmployeeId = (employee: User | null | undefined): string => {
 // Create a helper function to get the employee projects
 const getEmployeeProjects = (employee: User | null | undefined): string[] => {
   if (!employee) return [];
-  return employee.projects || [];
+  return "projects" in employee ? (employee as any).projects || [] : [];
 };
 
 const EmployeeDashboard: React.FC = () => {
@@ -336,7 +336,9 @@ const EmployeeDashboard: React.FC = () => {
       const taskProjectId =
         typeof task.project === "string"
           ? task.project
-          : task.project?._id || "";
+          : (task.project && typeof task.project === "object" && "id" in task.project
+              ? (task.project as { id?: string; _id?: string })._id || (task.project as { id?: string; _id?: string }).id || ""
+              : "");
       return (
         (!priorityFilter || task.priority === priorityFilter) &&
         (!statusFilter || task.status === statusFilter) &&
@@ -348,7 +350,9 @@ const EmployeeDashboard: React.FC = () => {
       const entryProjectId =
         typeof entry.project === "string"
           ? entry.project
-          : entry.project?._id || "";
+          : (entry.project && typeof entry.project === "object" && "_id" in entry.project
+              ? (entry.project as { _id?: string; id?: string })._id || (entry.project as { _id?: string; id?: string }).id || ""
+              : "");
       const entryUserId =
         typeof entry.user === "string"
           ? entry.user
@@ -375,7 +379,9 @@ const EmployeeDashboard: React.FC = () => {
               const deliverableProjectId =
                 typeof d.project === "string"
                   ? d.project
-                  : d.project?._id || "";
+                  : (d.project && typeof d.project === "object" && "_id" in d.project
+                      ? (d.project as { _id?: string; id?: string })._id || (d.project as { _id?: string; id?: string }).id || ""
+                      : "");
               return deliverableProjectId === projectId;
             }) || []
           }
@@ -467,7 +473,6 @@ const EmployeeDashboard: React.FC = () => {
             grade: 0,
             designation: "",
             cnic: "",
-            department: "",
             projects: [],
           }
         }
@@ -500,7 +505,6 @@ const EmployeeDashboard: React.FC = () => {
               grade: 0,
               designation: "",
               cnic: "",
-              department: "",
               projects: [],
             }
           }
@@ -528,7 +532,6 @@ const EmployeeDashboard: React.FC = () => {
               grade: 0,
               designation: "",
               cnic: "",
-              department: "",
               projects: [],
             }
           }
@@ -550,7 +553,6 @@ const EmployeeDashboard: React.FC = () => {
               grade: 0,
               designation: "",
               cnic: "",
-              department: "",
               projects: [],
             }
           }
