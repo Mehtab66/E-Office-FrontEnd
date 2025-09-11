@@ -3,6 +3,7 @@ import { FiX } from "react-icons/fi";
 import type { Employee } from "../../apis/authService";
 import type { Task } from "../../types/task";
 import type { Project } from "../../types/project";
+
 interface AddTaskModalProps {
   projects: Project[];
   employee: Employee;
@@ -39,37 +40,37 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     isSubtask: false,
     parentTaskId: "",
   });
-  const [teamMembers, setTeamMembers] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (formData.project) {
-      const project = projects.find((p) => p.id === formData.project);
+      const project = projects.find((p) => p.id === formData.project || p._id === formData.project);
       if (project) {
-        setTeamMembers([
-          ...project.teamMembers.map((member: any) =>
-            typeof member === "string"
-              ? { id: member, name: member }
-              : { id: member.id, name: member.name }
-          ),
-          typeof project.teamLead === "string"
-            ? { id: project.teamLead, name: project.teamLead }
-            : {
-                id: (project.teamLead as { id: string; name: string }).id,
-                name: (project.teamLead as { id: string; name: string }).name,
-              },
-        ]);
+        // Extract team members from project
+        const members = project.teamMembers.map((member: any) =>
+          typeof member === "string"
+            ? { id: member, name: `Member ${member.substring(0, 5)}` }
+            : { id: member._id || member.id, name: member.name || `Member ${member._id?.substring(0, 5)}` }
+        );
+        
+        // Extract team lead from project
+        const lead = typeof project.teamLead === "string"
+          ? { id: project.teamLead, name: `Team Lead ${project.teamLead.substring(0, 5)}` }
+          : { id: project.teamLead._id || project.teamLead.id, name: project.teamLead.name || `Team Lead ${project.teamLead._id?.substring(0, 5)}` };
+
+        setTeamMembers([...members, lead]);
       }
     }
   }, [formData.project, projects]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.checked });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,9 +90,15 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     onClose();
   };
 
+  // Filter parent tasks for subtasks
+  const parentTasks = tasks?.filter(task => 
+    (task.project === formData.project || (typeof task.project === 'object' && task.project._id === formData.project)) && 
+    !formData.isSubtask
+  ) || [];
+
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0  flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Add Task</h2>
@@ -107,8 +114,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
           </p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Add your form fields here, similar to AddDeliverableModal */}
-          {/* Example: */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Project
@@ -122,12 +127,49 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             >
               <option value="">Select a project</option>
               {projects.map((project) => (
-                <option key={project.id} value={project.id}>
+                <option key={project.id || project._id} value={project.id || project._id}>
                   {project.name}
                 </option>
               ))}
             </select>
           </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isSubtask"
+              name="isSubtask"
+              checked={formData.isSubtask}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor="isSubtask" className="ml-2 block text-sm text-gray-700">
+              This is a subtask
+            </label>
+          </div>
+
+          {formData.isSubtask && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Parent Task
+              </label>
+              <select
+                name="parentTaskId"
+                value={formData.parentTaskId}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                required={formData.isSubtask}
+              >
+                <option value="">Select a parent task</option>
+                {parentTasks.map((task) => (
+                  <option key={task.id || task._id} value={task.id || task._id}>
+                    {task.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Title
@@ -141,6 +183,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               required
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
@@ -150,11 +193,81 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               value={formData.description}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              rows={4}
+              rows={3}
               placeholder="Add details about the task..."
             />
           </div>
-          {/* Add more fields as needed */}
+
+          {!formData.isSubtask && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Assign to Team Member
+              </label>
+              <select
+                name="assignedTo"
+                value={formData.assignedTo}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                required={!formData.isSubtask}
+              >
+                <option value="">Select a team member</option>
+                {teamMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Priority
+            </label>
+            <select
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              required
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              required
+            >
+              <option value="todo">To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Due Date
+            </label>
+            <input
+              type="date"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            />
+          </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -175,4 +288,5 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     </div>
   );
 };
+
 export default AddTaskModal;

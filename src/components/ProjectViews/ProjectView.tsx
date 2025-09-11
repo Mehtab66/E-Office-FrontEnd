@@ -16,7 +16,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
   employee,
   setActiveView,
   onAddTask,
-  onAddDeliverable,
 }) => {
   useEffect(() => {
     console.log("Projects updated:", projects);
@@ -56,12 +55,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
               <FiPlus className="mr-2" /> Add Task
             </button>
           )}
-          <button
-            onClick={onAddDeliverable}
-            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md"
-          >
-            <FiPlus className="mr-2" /> Add Deliverable
-          </button>
+          
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">

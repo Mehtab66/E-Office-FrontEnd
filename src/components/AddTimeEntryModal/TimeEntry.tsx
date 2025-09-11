@@ -82,7 +82,7 @@ const AddTimeEntryModal: React.FC<AddTimeEntryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0  bg-opacity-60  flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
           <div className="flex justify-between items-center">

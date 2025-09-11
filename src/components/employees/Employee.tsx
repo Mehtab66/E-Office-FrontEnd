@@ -105,7 +105,7 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 bg-background min-h-screen">
+    <div className="container  px-4 py-6 bg-background min-h-screen">
       <div className="bg-card rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

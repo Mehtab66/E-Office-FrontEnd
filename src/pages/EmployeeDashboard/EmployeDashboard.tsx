@@ -415,7 +415,6 @@ const EmployeeDashboard: React.FC = () => {
             employee={employee}
             setActiveView={setActiveView}
             onAddTask={() => setShowAddTaskModal(true)}
-            onAddDeliverable={() => setShowAddDeliverableModal(true)}
           />
         );
       case "tasks":
