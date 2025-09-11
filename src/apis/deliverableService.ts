@@ -9,6 +9,8 @@ export const createDeliverable = async (
   >
 ): Promise<Deliverable> => {
   try {
+    console.log("Creating deliverable with data:", data);
+
     const response = await apiClient.post(
       `/api/projects/${projectId}/deliverables`,
       data

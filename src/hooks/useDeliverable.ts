@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+// hooks/useDeliverable.ts (updated with invalidateQueries)
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import {
   createDeliverable,
@@ -10,6 +11,7 @@ import {
 import type { Deliverable } from "../types/deliverable";
 
 export const useCreateDeliverable = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       projectId,
@@ -20,21 +22,34 @@ export const useCreateDeliverable = () => {
         Deliverable,
         "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"
       >;
-    }) => createDeliverable(projectId, data),
-    onSuccess: (data: Deliverable) => {
+    }) => {
+      console.log("Calling createDeliverable with:", { projectId, data });
+      return createDeliverable(projectId, data);
+    },
+    onSuccess: (_data: Deliverable, variables) => {
+      console.log("Deliverable created successfully:", _data);
+      queryClient.invalidateQueries({
+        queryKey: ["deliverables", variables.projectId],
+      });
       toast.success("Deliverable created successfully!");
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      console.error("Failed to create deliverable:", {
+        message: error.message,
+        details: error.response?.data || error,
+      });
       toast.error(`Failed to create deliverable: ${error.message}`);
     },
   });
 };
-
-export const useGetDeliverables = (projectId: string, p0: { enabled: boolean; }) => {
+export const useGetDeliverables = (
+  projectId: string,
+  options: { enabled: boolean }
+) => {
   return useQuery({
     queryKey: ["deliverables", projectId],
     queryFn: () => getDeliverables(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && options.enabled,
   });
 };
 
@@ -47,6 +62,7 @@ export const useGetDeliverable = (projectId: string, deliverableId: string) => {
 };
 
 export const useUpdateDeliverable = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       projectId,
@@ -57,7 +73,13 @@ export const useUpdateDeliverable = () => {
       deliverableId: string;
       data: Partial<Deliverable>;
     }) => updateDeliverable(projectId, deliverableId, data),
-    onSuccess: (data: Deliverable) => {
+    onSuccess: (_data: Deliverable, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["deliverables", variables.projectId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["deliverable", variables.projectId, variables.deliverableId],
+      });
       toast.success("Deliverable updated successfully!");
     },
     onError: (error: Error) => {
@@ -67,6 +89,7 @@ export const useUpdateDeliverable = () => {
 };
 
 export const useDeleteDeliverable = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       projectId,
@@ -75,7 +98,10 @@ export const useDeleteDeliverable = () => {
       projectId: string;
       deliverableId: string;
     }) => deleteDeliverable(projectId, deliverableId),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["deliverables", variables.projectId],
+      });
       toast.success("Deliverable deleted successfully!");
     },
     onError: (error: Error) => {

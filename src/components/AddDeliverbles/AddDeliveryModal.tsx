@@ -1,63 +1,103 @@
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCreateDeliverable } from "../../hooks/useDeliverable"; // Adjust path
+import { useGetDeliverables } from "../../hooks/useDeliverable"; // Adjust path
+import type { Deliverable } from "../../types/deliverable";
+import type { Employee } from "../../apis/authService"; // Adjust path
 import { FiX } from "react-icons/fi";
-import axios from "axios";
-import type { Employee } from "../../apis/authService";
-import type { Project } from "../../types/project";
+
 interface AddDeliverableModalProps {
-  projects: Project[];
-  employee: Employee;
-  onSubmit: (data: {
-    project: string;
-    date: string;
-    description: string;
-  }) => void;
+  projectId: string;
+  employee: Employee | null; // Allow null to handle missing employee
   onClose: () => void;
 }
 
 const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
-  projects,
+  projectId,
   employee,
-  onSubmit,
   onClose,
 }) => {
-  const [formData, setFormData] = useState({
-    project: "",
-    date: new Date().toISOString().split("T")[0],
-    description: "",
-  });
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
+  const [parent, setParent] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const queryClient = useQueryClient();
+  const { mutate: createDeliverable, isPending } = useCreateDeliverable();
+  const { data: existingDeliverables = [], isLoading: isDeliverablesLoading } =
+    useGetDeliverables(projectId, {
+      enabled: !!projectId,
+    });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormFormEvent) => {
     e.preventDefault();
-    const data = {
-      project: formData.project,
-      date: formData.date,
-      description: formData.description,
-    };
-    try {
-      await axios.post(`/api/projects/${formData.project}/deliverables`, data, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      onSubmit(data);
-      onClose();
-    } catch (error) {
-      console.error("Error saving deliverable:", error);
+    console.log("Submitting new deliverable for projectId:", projectId);
+
+    if (!projectId) {
+      console.error("Project ID is undefined");
+      setError("Project ID is missing");
+      return;
     }
+
+    if (!employee || (!employee._id && !employee.id)) {
+      console.error("Employee data is invalid or missing", { employee });
+      setError(
+        "User authentication is required to create a deliverable. Please log in."
+      );
+      return;
+    }
+
+    const data: Omit<
+      Deliverable,
+      "_id" | "id" | "project" | "createdAt" | "updatedAt"
+    > = {
+      date,
+      description,
+      notes,
+      status: "pending",
+      parent,
+      createdBy: employee._id || employee.id,
+    };
+    console.log("Deliverable data:", data);
+
+    createDeliverable(
+      { projectId, data },
+      {
+        onSuccess: () => {
+          console.log("Deliverable created successfully");
+          queryClient.invalidateQueries({
+            queryKey: ["deliverables", projectId],
+          });
+          setError(null);
+          setDate("");
+          setDescription("");
+          setNotes("");
+          setParent(undefined);
+          onClose();
+        },
+        onError: (error: any) => {
+          console.error("Failed to create deliverable:", {
+            message: error.message,
+            details: error.response?.data || error,
+          });
+          setError(
+            error.response?.data?.message ||
+              "Failed to create deliverable. Please try again."
+          );
+        },
+      }
+    );
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white sticky top-0 z-10">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Add Deliverable</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">
+              Add Deliverable
+            </h2>
             <button
               onClick={onClose}
               className="text-white hover:text-gray-200 transition-colors"
@@ -65,40 +105,45 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               <FiX size={24} />
             </button>
           </div>
-          <p className="text-indigo-100 mt-1">
-            Add notes to track project progress
+          <p className="text-indigo-100 mt-1 text-sm sm:text-base">
+            Fill in the details to add a new deliverable
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-6 space-y-4 sm:space-y-5"
+        >
+          {error && (
+            <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm sm:text-base">
+              {error}
+            </div>
+          )}
+          {isDeliverablesLoading && (
+            <div className="text-center text-gray-500 text-sm sm:text-base">
+              Loading deliverables...
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project
-            </label>
-            <select
-              name="project"
-              value={formData.project}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              required
-            >
-              <option value="">Select a project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date
+              Due Date
             </label>
             <input
               type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               required
             />
           </div>
@@ -107,28 +152,53 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               Notes
             </label>
             <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              rows={4}
-              placeholder="Add details about the deliverable..."
-              required
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+              rows={3}
             />
           </div>
-          <div className="flex justify-end space-x-3 pt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Link to Previous Deliverable (for revisions)
+            </label>
+            <select
+              value={parent || ""}
+              onChange={(e) => setParent(e.target.value || undefined)}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+              disabled={isDeliverablesLoading}
+            >
+              <option value="">None</option>
+              {existingDeliverables.map((del) => (
+                <option
+                  key={String(del._id || del.id)}
+                  value={String(del._id || del.id)}
+                >
+                  {del.description} (Due:{" "}
+                  {new Date(del.date).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+              disabled={
+                isPending ||
+                !employee ||
+                (!employee._id && !employee.id) ||
+                isDeliverablesLoading
+              }
+              className="px-4 sm:px-5 py-2 sm:py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors text-sm sm:text-base"
             >
-              Save Deliverable
+              {isPending ? "Adding..." : "Add Deliverable"}
             </button>
           </div>
         </form>

@@ -1,8 +1,8 @@
 import type { Key } from "react";
 
 export interface Deliverable {
-  id: Key | null | undefined;
-  _id: string;
+  _id: Key | null | undefined;
+  id: string;
   project: string;
   date: string;
   description: string;
@@ -11,4 +11,5 @@ export interface Deliverable {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  parent?: string; // Optional link to parent deliverable for revisions
 }

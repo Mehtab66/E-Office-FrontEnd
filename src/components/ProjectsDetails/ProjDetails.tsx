@@ -9,13 +9,14 @@ import {
 import type { Employee } from "../../apis/authService";
 import type { Project } from "../../types/project";
 import type { Deliverable } from "../../types/deliverable";
-import AddTimeEntryModal from "../../components/AddTimeEntryModal/TimeEntry"; // Adjust the path as needed
+import AddTimeEntryModal from "../../components/AddTimeEntryModal/TimeEntry";
+import AddDeliverableModal from "../../components/AddDeliverbles/AddDeliveryModal";
 import type { TimeEntry } from "../../types/timeEntry";
 
 interface ProjectDetailsViewProps {
   projects: Project[];
   deliverables: Deliverable[];
-  employee: Employee;
+  employee: Employee | null;
   onAddTask: () => void;
   onAddDeliverable: () => void;
   setActiveView: (view: string) => void;
@@ -32,6 +33,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
   const [project, setProject] = useState<Project | null>(null);
   const [isTeamLead, setIsTeamLead] = useState(false);
   const [showTimeEntryModal, setShowTimeEntryModal] = useState(false);
+  const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
   const [dummyTimesheets, setDummyTimesheets] = useState([
     {
       id: 1,
@@ -39,7 +41,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       date: "2023-10-15",
       hours: 8,
       task: "Frontend Development",
-      approved: true
+      approved: true,
     },
     {
       id: 2,
@@ -47,7 +49,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       date: "2023-10-15",
       hours: 7.5,
       task: "Backend API Integration",
-      approved: false
+      approved: false,
     },
     {
       id: 3,
@@ -55,7 +57,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       date: "2023-10-15",
       hours: 6,
       task: "Database Optimization",
-      approved: true
+      approved: true,
     },
     {
       id: 4,
@@ -63,7 +65,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       date: "2023-10-16",
       hours: 7,
       task: "UI/UX Design",
-      approved: false
+      approved: false,
     },
     {
       id: 5,
@@ -71,51 +73,61 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       date: "2023-10-16",
       hours: 8,
       task: "Testing",
-      approved: true
-    }
+      approved: true,
+    },
   ]);
 
   useEffect(() => {
     console.log("Projects in Details:", projects);
     console.log("Deliverables:", deliverables);
+    console.log("Employee:", employee);
 
-    // Get the project ID from the URL or the first project
+    if (!employee) {
+      console.warn("Employee data is not available");
+      return;
+    }
+
     if (projects.length > 0) {
       const currentProject = projects[0];
+      console.log("Selected Project:", currentProject);
       setProject(currentProject);
-      
-      // Check if the current employee is the team lead of this project
-      const teamLeadId = typeof currentProject.teamLead === "string" 
-        ? currentProject.teamLead 
-        : currentProject.teamLead?._id || currentProject.teamLead?.id;
-      
+
+      const teamLeadId =
+        typeof currentProject.teamLead === "string"
+          ? currentProject.teamLead
+          : currentProject.teamLead?._id || currentProject.teamLead?.id;
+
       const employeeId = employee._id || employee.id;
       setIsTeamLead(teamLeadId === employeeId);
+
+      const projectId = currentProject._id || currentProject.id;
+      if (!projectId) {
+        console.error("Project ID is undefined or missing:", currentProject);
+      }
+    } else {
+      console.warn("No projects available");
     }
   }, [projects, employee]);
 
   const handleTimeEntrySubmit = (data: TimeEntry) => {
-    // Handle the submitted time entry data
     console.log("Time entry submitted:", data);
-    // You might want to update your timesheets state here
     setShowTimeEntryModal(false);
-    
-    // Add the new time entry to the dummy timesheets
+
     const newEntry = {
       id: dummyTimesheets.length + 1,
-      userName: employee.name || "Current User",
+      userName: employee?.name || "Current User",
       date: data.date,
       hours: data.hours,
       task: data.title,
-      approved: false
+      approved: false,
     };
-    
+
     setDummyTimesheets([...dummyTimesheets, newEntry]);
   };
 
-  if (!project) {
+  if (!project || !employee) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <button
           onClick={() => setActiveView("projects")}
           className="flex items-center text-indigo-600 hover:text-indigo-800 mb-4"
@@ -123,60 +135,76 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
           <FiArrowLeft className="mr-2" /> Back to Projects
         </button>
         <div className="text-center py-12">
-          <p className="text-gray-500">Project not found or loading...</p>
+          <p className="text-gray-500">
+            {project
+              ? "Employee data not found or loading..."
+              : "Project not found or loading..."}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Helper function to get team member name
+  const projectId = project._id || project.id;
+  if (!projectId) {
+    console.error("Project ID is undefined in render:", project);
+    return (
+      <div className="p-4 sm:p-6">
+        <button
+          onClick={() => setActiveView("projects")}
+          className="flex items-center text-indigo-600 hover:text-indigo-800 mb-4"
+        >
+          <FiArrowLeft className="mr-2" /> Back to Projects
+        </button>
+        <div className="text-center py-12">
+          <p className="text-gray-500">Invalid project data</p>
+        </div>
+      </div>
+    );
+  }
+
   const getMemberName = (member: any): string => {
     if (typeof member === "string") return member;
     return member.name || "Unknown Member";
   };
 
-  // Helper function to get team lead name
   const getTeamLeadName = (teamLead: any): string => {
     if (typeof teamLead === "string") return teamLead;
     return teamLead.name || "Unknown Team Lead";
   };
 
-  // Helper function to get client name
   const getClientName = (client: any): string => {
     if (typeof client === "string") return client;
     return client.name || "Unknown Client";
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <button
           onClick={() => setActiveView("projects")}
-          className="flex items-center text-indigo-600 hover:text-indigo-800"
+          className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm sm:text-base"
         >
           <FiArrowLeft className="mr-2" /> Back to Projects
         </button>
-        <div className="flex items-center gap-3">
-          {/* This button should be visible to all team members */}
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={() => setShowTimeEntryModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center"
+            className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center text-sm sm:text-base"
           >
             <FiPlus className="mr-2" /> Enter Time Entry
           </button>
-          
-          {/* These buttons should only be visible to team leads */}
           {isTeamLead && (
             <>
               <button
                 onClick={onAddTask}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center"
+                className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center text-sm sm:text-base"
               >
                 <FiPlus className="mr-2" /> Add Task
               </button>
               <button
-                onClick={onAddDeliverable}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center"
+                onClick={() => setShowAddDeliverableModal(true)}
+                className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center text-sm sm:text-base"
               >
                 <FiPlus className="mr-2" /> Add Deliverable
               </button>
@@ -185,16 +213,19 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         </div>
       </div>
 
-      {/* Project Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex justify-between items-start">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              {project.name}
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
               Client: {getClientName(project.client)}
             </p>
             {isTeamLead && (
-              <p className="text-sm text-indigo-600 mt-1">You are the Team Lead</p>
+              <p className="text-sm text-indigo-600 mt-1">
+                You are the Team Lead
+              </p>
             )}
           </div>
           <span
@@ -211,12 +242,12 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mt-6">
           <div className="flex items-center">
             <FiCalendar className="text-gray-400 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Start Date</p>
-              <p className="font-medium">
+              <p className="font-medium text-sm sm:text-base">
                 {project.startDate
                   ? new Date(project.startDate).toLocaleDateString()
                   : "N/A"}
@@ -227,22 +258,25 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
             <FiUsers className="text-gray-400 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Team Lead</p>
-              <p className="font-medium">{getTeamLeadName(project.teamLead)}</p>
+              <p className="font-medium text-sm sm:text-base">
+                {getTeamLeadName(project.teamLead)}
+              </p>
             </div>
           </div>
           <div className="flex items-center">
             <FiCheckCircle className="text-gray-400 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Timeline</p>
-              <p className="font-medium">{project.estimatedTime || "N/A"}</p>
+              <p className="font-medium text-sm sm:text-base">
+                {project.estimatedTime || "N/A"}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Team Members */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
           Team Members
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -257,7 +291,9 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
                 </span>
               </div>
               <div>
-                <p className="font-medium">{getMemberName(member)}</p>
+                <p className="font-medium text-sm sm:text-base">
+                  {getMemberName(member)}
+                </p>
                 <p className="text-sm text-gray-500">Team Member</p>
               </div>
             </div>
@@ -265,10 +301,11 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         </div>
       </div>
 
-      {/* Deliverables */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Deliverables</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+            Deliverables
+          </h2>
           <span className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full">
             {deliverables.length} items
           </span>
@@ -277,9 +314,13 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         {deliverables.length === 0 ? (
           <div className="text-center py-8">
             <FiCheckCircle className="mx-auto text-gray-300 text-4xl mb-3" />
-            <p className="text-gray-500">No deliverables yet</p>
+            <p className="text-gray-500 text-sm sm:text-base">
+              No deliverables yet
+            </p>
             {!isTeamLead && (
-              <p className="text-sm text-gray-400 mt-2">Only team leads can add deliverables</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Only team leads can add deliverables
+              </p>
             )}
           </div>
         ) : (
@@ -290,13 +331,23 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
                 className="flex items-center justify-between p-4 border border-gray-100 rounded-lg"
               >
                 <div>
-                  <p className="font-medium">{deliverable.description}</p>
+                  <p className="font-medium text-sm sm:text-base">
+                    {deliverable.description}
+                  </p>
                   <p className="text-sm text-gray-500">
                     Due:{" "}
                     {deliverable.date
                       ? new Date(deliverable.date).toLocaleDateString()
                       : "N/A"}
                   </p>
+                  {deliverable.parent && (
+                    <p className="text-sm text-gray-400">
+                      Revision of:{" "}
+                      {typeof deliverable.parent === "string"
+                        ? deliverable.parent
+                        : deliverable.parent.description}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`px-3 py-1 text-xs font-medium rounded-full ${
@@ -316,10 +367,11 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         )}
       </div>
 
-      {/* Timesheets */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Team Timesheets</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+            Team Timesheets
+          </h2>
           <span className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full">
             {dummyTimesheets.length} entries
           </span>
@@ -328,7 +380,9 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         {dummyTimesheets.length === 0 ? (
           <div className="text-center py-8">
             <FiCalendar className="mx-auto text-gray-300 text-4xl mb-3" />
-            <p className="text-gray-500">No timesheet entries yet</p>
+            <p className="text-gray-500 text-sm sm:text-base">
+              No timesheet entries yet
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -386,13 +440,20 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         )}
       </div>
 
-      {/* Time Entry Modal */}
       {showTimeEntryModal && (
         <AddTimeEntryModal
           projects={projects}
           employee={employee}
           onSubmit={handleTimeEntrySubmit}
           onClose={() => setShowTimeEntryModal(false)}
+        />
+      )}
+
+      {showAddDeliverableModal && (
+        <AddDeliverableModal
+          projectId={String(projectId)}
+          employee={employee}
+          onClose={() => setShowAddDeliverableModal(false)}
         />
       )}
     </div>

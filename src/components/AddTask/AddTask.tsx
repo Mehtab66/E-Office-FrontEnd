@@ -40,31 +40,45 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     isSubtask: false,
     parentTaskId: "",
   });
-  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
+  const [teamMembers, setTeamMembers] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   useEffect(() => {
     if (formData.project) {
-      const project = projects.find((p) => p.id === formData.project || p._id === formData.project);
+      const project = projects.find(
+        (p) => p.id === formData.project || p._id === formData.project
+      );
       if (project) {
-        // Extract team members from project
         const members = project.teamMembers.map((member: any) =>
           typeof member === "string"
             ? { id: member, name: `Member ${member.substring(0, 5)}` }
-            : { id: member._id || member.id, name: member.name || `Member ${member._id?.substring(0, 5)}` }
+            : {
+                id: member._id || member.id,
+                name: member.name || `Member ${member._id?.substring(0, 5)}`,
+              }
         );
-        
-        // Extract team lead from project
-        const lead = typeof project.teamLead === "string"
-          ? { id: project.teamLead, name: `Team Lead ${project.teamLead.substring(0, 5)}` }
-          : { id: project.teamLead._id || project.teamLead.id, name: project.teamLead.name || `Team Lead ${project.teamLead._id?.substring(0, 5)}` };
-
+        const lead =
+          typeof project.teamLead === "string"
+            ? {
+                id: project.teamLead,
+                name: `Team Lead ${project.teamLead.substring(0, 5)}`,
+              }
+            : {
+                id: project.teamLead._id || project.teamLead.id,
+                name:
+                  project.teamLead.name ||
+                  `Team Lead ${project.teamLead._id?.substring(0, 5)}`,
+              };
         setTeamMembers([...members, lead]);
       }
     }
   }, [formData.project, projects]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -90,18 +104,21 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     onClose();
   };
 
-  // Filter parent tasks for subtasks
-  const parentTasks = tasks?.filter(task => 
-    (task.project === formData.project || (typeof task.project === 'object' && task.project._id === formData.project)) && 
-    !formData.isSubtask
-  ) || [];
+  const parentTasks =
+    tasks?.filter(
+      (task) =>
+        (task.project === formData.project ||
+          (typeof task.project === "object" &&
+            task.project._id === formData.project)) &&
+        !formData.isSubtask
+    ) || [];
 
   return (
-    <div className="fixed inset-0  flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white sticky top-0 z-10">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Add Task</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">Add Task</h2>
             <button
               onClick={onClose}
               className="text-white hover:text-gray-200 transition-colors"
@@ -109,11 +126,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               <FiX size={24} />
             </button>
           </div>
-          <p className="text-indigo-100 mt-1">
+          <p className="text-indigo-100 mt-1 text-sm sm:text-base">
             Fill in the details to add a new task
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-6 space-y-4 sm:space-y-5"
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Project
@@ -122,12 +142,15 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="project"
               value={formData.project}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               required
             >
               <option value="">Select a project</option>
               {projects.map((project) => (
-                <option key={project.id || project._id} value={project.id || project._id}>
+                <option
+                  key={project.id || project._id}
+                  value={project.id || project._id}
+                >
                   {project.name}
                 </option>
               ))}
@@ -143,7 +166,10 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               onChange={handleCheckboxChange}
               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
             />
-            <label htmlFor="isSubtask" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="isSubtask"
+              className="ml-2 block text-sm text-gray-700"
+            >
               This is a subtask
             </label>
           </div>
@@ -157,7 +183,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 name="parentTaskId"
                 value={formData.parentTaskId}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
                 required={formData.isSubtask}
               >
                 <option value="">Select a parent task</option>
@@ -179,7 +205,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               required
             />
           </div>
@@ -192,7 +218,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               rows={3}
               placeholder="Add details about the task..."
             />
@@ -207,7 +233,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 name="assignedTo"
                 value={formData.assignedTo}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
                 required={!formData.isSubtask}
               >
                 <option value="">Select a team member</option>
@@ -228,7 +254,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               required
             >
               <option value="low">Low</option>
@@ -246,7 +272,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               required
             >
               <option value="todo">To Do</option>
@@ -264,7 +290,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="dueDate"
               value={formData.dueDate}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
             />
           </div>
 
@@ -272,13 +298,13 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md text-sm sm:text-base"
             >
               Save Task
             </button>
