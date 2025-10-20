@@ -46,6 +46,7 @@ const EmployeeDashboard: React.FC = () => {
   const [activeView, setActiveView] = useState("dashboard");
   const [showAddTimeModal, setShowAddTimeModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [selectedProjectForTask, setSelectedProjectForTask] = useState<Project | null>(null);
   const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
   const [editTimeEntry, setEditTimeEntry] = useState<TimeEntry | undefined>(
     undefined
@@ -386,7 +387,10 @@ const EmployeeDashboard: React.FC = () => {
             }) || []
           }
           employee={employee}
-          onAddTask={() => setShowAddTaskModal(true)}
+          onAddTask={(project) => {
+            setSelectedProjectForTask(project);
+            setShowAddTaskModal(true);
+          }}
           onAddDeliverable={() => setShowAddDeliverableModal(true)}
           setActiveView={setActiveView}
         />
@@ -410,12 +414,15 @@ const EmployeeDashboard: React.FC = () => {
         );
       case "projects":
         return (
-          <ProjectsView
-            projects={employeeProjects}
-            employee={employee}
-            setActiveView={setActiveView}
-            onAddTask={() => setShowAddTaskModal(true)}
-          />
+        <ProjectsView
+          projects={employeeProjects}
+          employee={employee}
+          setActiveView={setActiveView}
+          onAddTask={(project) => {
+            setSelectedProjectForTask(project);
+            setShowAddTaskModal(true);
+          }}
+        />
         );
       case "tasks":
         return (
@@ -429,7 +436,10 @@ const EmployeeDashboard: React.FC = () => {
             setPriorityFilter={setPriorityFilter}
             setStatusFilter={setStatusFilter}
             setProjectFilter={setProjectFilter}
-            onAddTask={() => setShowAddTaskModal(true)}
+            onAddTask={(project) => {
+              setSelectedProjectForTask(project);
+              setShowAddTaskModal(true);
+            }}
           />
         );
       case "timesheets":
@@ -521,6 +531,7 @@ const EmployeeDashboard: React.FC = () => {
                 : p.teamLead?._id || p.teamLead?.id;
             return teamLeadId === getEmployeeId(employee);
           })}
+          selectedProject={selectedProjectForTask || undefined}
           employee={
             employee || {
               _id: "",
@@ -535,7 +546,10 @@ const EmployeeDashboard: React.FC = () => {
             }
           }
           onSubmit={handleAddTask}
-          onClose={() => setShowAddTaskModal(false)}
+          onClose={() => {
+            setShowAddTaskModal(false);
+            setSelectedProjectForTask(null);
+          }}
           tasks={tasks}
         />
       )}

@@ -7,6 +7,7 @@ import type { Project } from "../../types/project";
 interface AddTaskModalProps {
   projects: Project[];
   employee: Employee;
+  selectedProject?: Project;
   onSubmit: (data: {
     title: string;
     description?: string;
@@ -25,12 +26,13 @@ interface AddTaskModalProps {
 const AddTaskModal: React.FC<AddTaskModalProps> = ({
   projects,
   employee,
+  selectedProject,
   onSubmit,
   onClose,
   tasks,
 }) => {
   const [formData, setFormData] = useState({
-    project: "",
+    project: selectedProject ? (selectedProject._id || selectedProject.id || "") : "",
     title: "",
     description: "",
     assignedTo: "",
@@ -45,35 +47,34 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   >([]);
 
   useEffect(() => {
-    if (formData.project) {
-      const project = projects.find(
-        (p) => p.id === formData.project || p._id === formData.project
+    const projectToUse = selectedProject || projects.find(
+      (p) => p.id === formData.project || p._id === formData.project
+    );
+    
+    if (projectToUse) {
+      const members = projectToUse.teamMembers.map((member: any) =>
+        typeof member === "string"
+          ? { id: member, name: `Member ${member.substring(0, 5)}` }
+          : {
+              id: member._id || member.id,
+              name: member.name || `Member ${member._id?.substring(0, 5)}`,
+            }
       );
-      if (project) {
-        const members = project.teamMembers.map((member: any) =>
-          typeof member === "string"
-            ? { id: member, name: `Member ${member.substring(0, 5)}` }
-            : {
-                id: member._id || member.id,
-                name: member.name || `Member ${member._id?.substring(0, 5)}`,
-              }
-        );
-        const lead =
-          typeof project.teamLead === "string"
-            ? {
-                id: project.teamLead,
-                name: `Team Lead ${project.teamLead.substring(0, 5)}`,
-              }
-            : {
-                id: project.teamLead._id || project.teamLead.id,
-                name:
-                  project.teamLead.name ||
-                  `Team Lead ${project.teamLead._id?.substring(0, 5)}`,
-              };
-        setTeamMembers([...members, lead]);
-      }
+      const lead =
+        typeof projectToUse.teamLead === "string"
+          ? {
+              id: projectToUse.teamLead,
+              name: `Team Lead ${projectToUse.teamLead.substring(0, 5)}`,
+            }
+          : {
+              id: projectToUse.teamLead._id || projectToUse.teamLead.id,
+              name:
+                projectToUse.teamLead.name ||
+                `Team Lead ${projectToUse.teamLead._id?.substring(0, 5)}`,
+            };
+      setTeamMembers([...members, lead]);
     }
-  }, [formData.project, projects]);
+  }, [selectedProject, formData.project, projects]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -104,12 +105,13 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     onClose();
   };
 
+  const currentProjectId = selectedProject ? (selectedProject._id || selectedProject.id) : formData.project;
   const parentTasks =
     tasks?.filter(
       (task) =>
-        (task.project === formData.project ||
+        (task.project === currentProjectId ||
           (typeof task.project === "object" &&
-            task.project._id === formData.project)) &&
+            task.project._id === currentProjectId)) &&
         !formData.isSubtask
     ) || [];
 
@@ -134,28 +136,39 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
           onSubmit={handleSubmit}
           className="p-4 sm:p-6 space-y-4 sm:space-y-5"
         >
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project
-            </label>
-            <select
-              name="project"
-              value={formData.project}
-              onChange={handleChange}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
-              required
-            >
-              <option value="">Select a project</option>
-              {projects.map((project) => (
-                <option
-                  key={project.id || project._id}
-                  value={project.id || project._id}
-                >
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {selectedProject ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Selected Project
+              </label>
+              <div className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm sm:text-base">
+                {selectedProject.name}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Project
+              </label>
+              <select
+                name="project"
+                value={formData.project}
+                onChange={handleChange}
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+                required
+              >
+                <option value="">Select a project</option>
+                {projects.map((project) => (
+                  <option
+                    key={project.id || project._id}
+                    value={project.id || project._id}
+                  >
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center">
             <input
