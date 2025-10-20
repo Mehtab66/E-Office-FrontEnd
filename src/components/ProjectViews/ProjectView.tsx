@@ -7,7 +7,7 @@ interface ProjectsViewProps {
   projects: Project[];
   employee: Employee;
   setActiveView: (view: string) => void;
-  onAddTask: (project: Project) => void;
+  onAddTask: (project?: Project) => void;
   onAddDeliverable: () => void;
 }
 
@@ -49,7 +49,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
             return teamLeadId === employee.id;
           }) && (
             <button
-              onClick={() => onAddTask(project)}
+              onClick={() => onAddTask()}
               className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md"
             >
               <FiPlus className="mr-2" /> Add Task

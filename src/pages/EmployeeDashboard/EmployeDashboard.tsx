@@ -419,9 +419,10 @@ const EmployeeDashboard: React.FC = () => {
           employee={employee}
           setActiveView={setActiveView}
           onAddTask={(project) => {
-            setSelectedProjectForTask(project);
+            setSelectedProjectForTask(project || null);
             setShowAddTaskModal(true);
           }}
+          onAddDeliverable={() => {}}
         />
         );
       case "tasks":
@@ -524,13 +525,16 @@ const EmployeeDashboard: React.FC = () => {
       )}
       {showAddTaskModal && (
         <AddTaskModal
-          projects={employeeProjects.filter((p) => {
-            const teamLeadId =
-              typeof p.teamLead === "string"
-                ? p.teamLead
-                : p.teamLead?._id || p.teamLead?.id;
-            return teamLeadId === getEmployeeId(employee);
-          })}
+          projects={selectedProjectForTask 
+            ? employeeProjects.filter((p) => {
+                const teamLeadId =
+                  typeof p.teamLead === "string"
+                    ? p.teamLead
+                    : p.teamLead?._id || p.teamLead?.id;
+                return teamLeadId === getEmployeeId(employee);
+              })
+            : employeeProjects
+          }
           selectedProject={selectedProjectForTask || undefined}
           employee={
             employee || {
