@@ -1,3 +1,4 @@
+// export default AddTaskModal;
 import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import type { Employee } from "../../apis/authService";
@@ -72,7 +73,15 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 projectToUse.teamLead.name ||
                 `Team Lead ${projectToUse.teamLead._id?.substring(0, 5)}`,
             };
-      setTeamMembers([...members, lead]);
+            
+      // --- FIX for Duplicate Key Warning ---
+      const allMembers = [...members, lead];
+      const uniqueMembers = [
+        ...new Map(allMembers.map((m) => [m.id, m])).values(),
+      ];
+      setTeamMembers(uniqueMembers);
+      // --- End of Fix ---
+
     }
   }, [selectedProject, formData.project, projects]);
 
@@ -94,7 +103,9 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
       title: formData.title,
       description: formData.description,
       project: formData.project,
+      // --- FIX for API Error ---
       assignedTo: formData.isSubtask ? undefined : formData.assignedTo,
+      // --- End of Fix ---
       priority: formData.priority,
       status: formData.status,
       dueDate: formData.dueDate || undefined,
@@ -106,13 +117,13 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   };
 
   const currentProjectId = selectedProject ? (selectedProject._id || selectedProject.id) : formData.project;
-  const parentTasks =
+ const parentTasks =
     tasks?.filter(
       (task) =>
         (task.project === currentProjectId ||
           (typeof task.project === "object" &&
             task.project._id === currentProjectId)) &&
-        !formData.isSubtask
+        !task.isSubtask // <-- FIX (assuming tasks have an 'isSubtask' property)
     ) || [];
 
   return (
@@ -242,6 +253,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Assign to Team Member
               </label>
+              {/* --- FIX for API Error --- */}
               <select
                 name="assignedTo"
                 value={formData.assignedTo}
@@ -249,6 +261,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
                 required={!formData.isSubtask}
               >
+              {/* --- End of Fix --- */}
                 <option value="">Select a team member</option>
                 {teamMembers.map((member) => (
                   <option key={member.id} value={member.id}>

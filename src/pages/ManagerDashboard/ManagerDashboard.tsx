@@ -14,6 +14,7 @@ import {
   FiClock,
 } from "react-icons/fi";
 import AddEntityModal from "../../components/AddEntity/AddEntityModal";
+import AddTaskModal from "../../components/AddTask/AddTask";
 import ProjectTimesheetView from "../../components/ProjectTimeSheetView/ProjectTimeSheet";
 import ProjectsView from "../../components/Projects/Projects";
 import ClientsView from "../../components/clients/Clients";
@@ -28,7 +29,9 @@ import {
 } from "../../hooks/useEmployee";
 import { useManagerDashboardStats } from "../../hooks/useManager";
 import { useAuthLogout } from "../../hooks/useAuth";
+import { useCreateTask } from "../../hooks/useTask";
 import type { Client, Project, User, TimeEntry } from "../../types/index";
+import type { Task } from "../../types/task";
 import { useAuthStore } from "../../store/authStore";
 import { useNavigate } from "react-router-dom";
 
@@ -46,6 +49,8 @@ const ManagerDashboard: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalConfig, setModalConfig] = useState<EntityConfig | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [selectedProjectForTask, setSelectedProjectForTask] = useState<Project | null>(null);
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const { mutate: logout } = useAuthLogout();
@@ -63,6 +68,7 @@ const ManagerDashboard: React.FC = () => {
   const { mutate: addProject } = useAddProject();
   const { mutate: createUser } = useCreateUser();
   const { mutate: updateUser } = useUpdateUser();
+  const { mutate: createTask } = useCreateTask();
 
   const clients = clientsData as Client[];
   const employees = (employeesData?.users || []) as User[];
@@ -390,6 +396,44 @@ const ManagerDashboard: React.FC = () => {
     openAddModal("client", client);
   };
 
+  // Handle add task
+  const handleAddTask = (data: {
+    title: string;
+    description?: string;
+    project: string;
+    assignedTo?: string;
+    priority: "urgent" | "high" | "medium" | "low";
+    status: "todo" | "in_progress" | "done";
+    dueDate?: string;
+    isSubtask?: boolean;
+    parentTaskId?: string;
+  }) => {
+    const taskData: Omit<Task, "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"> = {
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      status: data.status,
+      dueDate: data.dueDate,
+      ...(data.assignedTo ? { assignedTo: data.assignedTo } : {}),
+      subtasks: [],
+    };
+    
+    createTask(
+      { projectId: data.project, data: taskData },
+      {
+        onSuccess: () => {
+          setShowAddTaskModal(false);
+          setSelectedProjectForTask(null);
+        },
+        onError: (error: any) => {
+          setErrorMessage(
+            error.response?.data?.error || "Failed to create task"
+          );
+        },
+      }
+    );
+  };
+
   // Handle logout
   const handleLogout = () => {
     logout();
@@ -461,6 +505,10 @@ const ManagerDashboard: React.FC = () => {
             }
             setActiveView={setActiveView}
             onPageChange={setCurrentPage} // Pass page change handler
+            onAddTask={(project) => {
+              setSelectedProjectForTask(project || null);
+              setShowAddTaskModal(true);
+            }}
           />
         );
       case "clients":
@@ -580,6 +628,31 @@ const ManagerDashboard: React.FC = () => {
             setModalConfig(null);
             setErrorMessage(null);
           }}
+        />
+      )}
+      {showAddTaskModal && (
+        <AddTaskModal
+          projects={projects}
+          selectedProject={selectedProjectForTask || undefined}
+          employee={
+            user || {
+              _id: "",
+              name: "",
+              role: "manager",
+              email: "",
+              phone: "",
+              grade: 0,
+              designation: "",
+              cnic: "",
+              projects: [],
+            }
+          }
+          onSubmit={handleAddTask}
+          onClose={() => {
+            setShowAddTaskModal(false);
+            setSelectedProjectForTask(null);
+          }}
+          tasks={[]}
         />
       )}
     </div>
