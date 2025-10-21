@@ -39,10 +39,9 @@ interface EntityConfig {
   type: "client" | "project" | "employee" | "deliverable";
   title: string;
   fields: any[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any ) => void;
   initialData?: any;
 }
-
 const ManagerDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
