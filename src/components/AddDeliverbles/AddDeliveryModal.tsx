@@ -7,10 +7,11 @@
 // import { FiX } from "react-icons/fi";
 
 // interface AddDeliverableModalProps {
-//   projectId: string;
+//   projectId: string; // Corrected: Now expects projectId
 //   employee: Employee | null; // Allow null to handle missing employee
 //   onClose: () => void;
 // }
+
 // const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
 //   projectId,
 //   employee,
@@ -29,7 +30,8 @@
 //       enabled: !!projectId,
 //     });
 
-//   const handleSubmit = (e: React.FormFormEvent) => {
+//   // FIXED: Corrected event type from React.FormFormEvent to React.FormEvent
+//   const handleSubmit = (e: React.FormEvent) => {
 //     e.preventDefault();
 //     console.log("Submitting new deliverable for projectId:", projectId);
 
@@ -39,6 +41,7 @@
 //       return;
 //     }
 
+//     // This check is still valid for ensuring a user is logged in
 //     if (!employee || (!employee._id && !employee.id)) {
 //       console.error("Employee data is invalid or missing", { employee });
 //       setError(
@@ -47,16 +50,17 @@
 //       return;
 //     }
 
+//     // FIXED: Removed `createdBy`. This is now handled securely by the backend.
+//     // The Omit type in the hook/service already reflected this.
 //     const data: Omit<
 //       Deliverable,
-//       "_id" | "id" | "project" | "createdAt" | "updatedAt"
+//       "_id" | "id" | "project" | "createdBy" | "createdAt" | "updatedAt"
 //     > = {
 //       date,
 //       description,
 //       notes,
 //       status: "pending",
 //       parent,
-//       createdBy: employee._id || employee.id,
 //     };
 //     console.log("Deliverable data:", data);
 
@@ -216,8 +220,8 @@ import type { Employee } from "../../apis/authService"; // Adjust path
 import { FiX } from "react-icons/fi";
 
 interface AddDeliverableModalProps {
-  projectId: string; // Corrected: Now expects projectId
-  employee: Employee | null; // Allow null to handle missing employee
+  projectId: string;
+  employee: Employee | null;
   onClose: () => void;
 }
 
@@ -239,28 +243,19 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
       enabled: !!projectId,
     });
 
-  // FIXED: Corrected event type from React.FormFormEvent to React.FormEvent
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting new deliverable for projectId:", projectId);
 
     if (!projectId) {
-      console.error("Project ID is undefined");
       setError("Project ID is missing");
       return;
     }
 
-    // This check is still valid for ensuring a user is logged in
     if (!employee || (!employee._id && !employee.id)) {
-      console.error("Employee data is invalid or missing", { employee });
-      setError(
-        "User authentication is required to create a deliverable. Please log in."
-      );
+      setError("User authentication is required to create a deliverable. Please log in.");
       return;
     }
 
-    // FIXED: Removed `createdBy`. This is now handled securely by the backend.
-    // The Omit type in the hook/service already reflected this.
     const data: Omit<
       Deliverable,
       "_id" | "id" | "project" | "createdBy" | "createdAt" | "updatedAt"
@@ -271,16 +266,12 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
       status: "pending",
       parent,
     };
-    console.log("Deliverable data:", data);
 
     createDeliverable(
       { projectId, data },
       {
         onSuccess: () => {
-          console.log("Deliverable created successfully");
-          queryClient.invalidateQueries({
-            queryKey: ["deliverables", projectId],
-          });
+          queryClient.invalidateQueries({ queryKey: ["deliverables", projectId] });
           setError(null);
           setDate("");
           setDescription("");
@@ -289,10 +280,6 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
           onClose();
         },
         onError: (error: any) => {
-          console.error("Failed to create deliverable:", {
-            message: error.message,
-            details: error.response?.data || error,
-          });
           setError(
             error.response?.data?.message ||
               "Failed to create deliverable. Please try again."
@@ -303,17 +290,28 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white sticky top-0 z-10">
+    /* OUTER WRAPPER: no bg color here — backdrop is a separate absolute element */
+    <div
+      className="fixed inset-0 flex items-center justify-center z-[9999] p-4 sm:p-6 overflow-y-auto"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* BACKDROP: absolute layer that actually blurs the page behind it.
+          - backdrop-blur-lg (Tailwind) OR inline fallback style for older setups
+          - bg-black/30 provides a dim overlay but is transparent enough to show blur
+      */}
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-lg"
+        style={{ WebkitBackdropFilter: "blur(10px)", backdropFilter: "blur(10px)" }}
+        aria-hidden="true"
+      />
+
+      {/* Modal card: put it above the backdrop with higher z-index */}
+      <div className="relative z-[10000] bg-white rounded-xl shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white sticky top-0 z-10 rounded-t-xl">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg sm:text-xl font-semibold">
-              Add Deliverable
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
+            <h2 className="text-lg sm:text-xl font-semibold">Add Deliverable</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
               <FiX size={24} />
             </button>
           </div>
@@ -321,10 +319,8 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
             Fill in the details to add a new deliverable
           </p>
         </div>
-        <form
-          onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-4 sm:space-y-5"
-        >
+
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
           {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm sm:text-base">
               {error}
@@ -335,10 +331,9 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               Loading deliverables...
             </div>
           )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Due Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
             <input
               type="date"
               value={date}
@@ -347,10 +342,9 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <input
               type="text"
               value={description}
@@ -359,10 +353,9 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -370,6 +363,7 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
               rows={3}
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Link to Previous Deliverable (for revisions)
@@ -382,16 +376,13 @@ const AddDeliverableModal: React.FC<AddDeliverableModalProps> = ({
             >
               <option value="">None</option>
               {existingDeliverables.map((del) => (
-                <option
-                  key={String(del._id || del.id)}
-                  value={String(del._id || del.id)}
-                >
-                  {del.description} (Due:{" "}
-                  {new Date(del.date).toLocaleDateString()})
+                <option key={String(del._id || del.id)} value={String(del._id || del.id)}>
+                  {del.description} (Due: {new Date(del.date).toLocaleDateString()})
                 </option>
               ))}
             </select>
           </div>
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
