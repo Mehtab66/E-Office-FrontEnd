@@ -209,17 +209,17 @@ import type { Employee } from "../../apis/authService";
 // Assuming Project type has 'name' and EITHER 'id' OR '_id' (or both, preferably _id)
 import type { Project } from "../../types/project";
 // Assuming Task type has '_id', 'title', 'project' (ID or object), 'priority', 'status', 'dueDate', 'assignedTo', 'subtasks'
-import type { Task } from "../../types/task";
+import type { Task } from "../../types/task";   
 
 interface TasksViewProps {
-  tasks: Task[];
-  projects: Project[];
+  tasks: Task[];
+  projects: Project[];
   employee: Employee; // Assuming this is the currently logged-in user
-  priorityFilter: string;
-  statusFilter: string;
+  priorityFilter: string;
+  statusFilter: string;
   projectFilter: string; // This should store the PROJECT ID
-  setPriorityFilter: (value: string) => void;
-  setStatusFilter: (value: string) => void;
+  setPriorityFilter: (value: string) => void;
+  setStatusFilter: (value: string) => void;
   setProjectFilter: (value: string) => void; // Should receive the PROJECT ID
   onAddTask: (project: Project) => void;
 }
@@ -227,14 +227,14 @@ interface TasksViewProps {
 const TasksView: React.FC<TasksViewProps> = ({
   tasks = [], // Default to empty array
   projects = [], // Default to empty array
-  employee,
-  priorityFilter,
-  statusFilter,
-  projectFilter,
-  setPriorityFilter,
-  setStatusFilter,
-  setProjectFilter,
-  onAddTask,
+  employee,
+  priorityFilter,
+  statusFilter,
+  projectFilter,
+  setPriorityFilter,
+  setStatusFilter,
+  setProjectFilter,
+  onAddTask,
 }) => {
 
   // Helper function to get project name safely
@@ -282,15 +282,15 @@ const TasksView: React.FC<TasksViewProps> = ({
   });
 
 
-  return (
+  return (
     <div className="space-y-6 p-4 md:p-6"> {/* Added padding */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
           <p className="text-gray-600 text-sm sm:text-base"> {/* Adjusted text size */}
             Manage your assigned tasks and subtasks
           </p>
-        </div>
+        </div>
         {/* Filter and Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto"> {/* Added flex-wrap */}
 
@@ -315,32 +315,32 @@ const TasksView: React.FC<TasksViewProps> = ({
 
           {/* Priority Filter */}
           <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm"
-          >
-            <option value="">All Priorities</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+          >
+            <option value="">All Priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
 
           {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm"
-          >
-            <option value="">All Statuses</option>
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="done">Done</option>
-          </select>
+          >
+            <option value="">All Statuses</option>
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
 
           {/* Add Task Button (Only if employee is a team lead) */}
           {isTeamLead && (
-            <button
+            <button
               onClick={() => {
                 // Find the first project where the employee is the team lead
               	const teamLeadProject = projects.find(p => {
@@ -357,104 +357,104 @@ const TasksView: React.FC<TasksViewProps> = ({
           	  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md text-sm" // Adjusted text size
         	  >
         	  	<FiPlus className="mr-1 sm:mr-2" /> Add Task {/* Adjusted margin */}
-        	  </button>
-      	  )}
-      	</div>
-      </div>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Task Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto"> {/* Added overflow-x-auto */}
         <table className="w-full min-w-[640px]"> {/* Added min-width */}
-          <thead className="bg-gray-50">
-            <tr>
+          <thead className="bg-gray-50">
+            <tr>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              	Task
-              </th>
+                Task
+              </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              	Project
-              </th>
+                Project
+              </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              	Priority
-              </th>
+                Priority
+              </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              	Status
-              </th>
+                Status
+              </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              	Due Date
-              </th>
+                Due Date
+              </th>
               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               	Assignee(s)
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
             {tasks.length > 0 ? tasks.map((task) => (
             	<React.Fragment key={task._id || task.id}> {/* Use _id primarily */}
             	  <tr className="hover:bg-gray-50 text-sm"> {/* Base text size */}
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-            	  	  {task.title}
-            	  	</td>
+                    {task.title}
+                  </td>
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">
                         {/* Use the helper function */}
             	  	  {getProjectName(task.project)}
-            	  	</td>
+                  </td>
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-            	  	  <span
+                    <span
             	  	  	className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${ // Adjusted padding and added capitalize
             	  	  	  task.priority === "urgent" ? "bg-red-100 text-red-800"
             	  	  	: task.priority === "high" ? "bg-orange-100 text-orange-800"
             	  	  	: task.priority === "medium" ? "bg-yellow-100 text-yellow-800"
-            	  	  	: "bg-green-100 text-green-800"
-            	  	  	}`}
-            	  	  >
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
             	  	  	{task.priority}
-            	  	  </span>
-            	  	</td>
+                    </span>
+                  </td>
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600 capitalize">
             	  	  {task.status.replace("_", " ")}
             	  	</td>
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}
-                    </td>
+                  </td>
             	  	<td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">
                       {/* Display Assignee Name or ID */}
                       {typeof task.assignedTo === 'object' && task.assignedTo !== null
                         // @ts-ignore Check for name
-                        ? task.assignedTo.name
+                      ? task.assignedTo.name
                         // If just ID, display it (or lookup name if employee list available)
                         : task.assignedTo || '-'
                       }
-                    </td>
-            	  </tr>
+                  </td>
+                </tr>
 
                     {/* Subtask Rows */}
             	  {task.subtasks?.map((subtask: any) => ( // Use 'any' or define Subtask type
             	  	<tr key={subtask._id || subtask.id} className="bg-gray-50/60 hover:bg-gray-100/60 text-sm"> {/* Style subtasks differently */}
             	  	  <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-gray-700"> {/* Indent */}
-            	  	  	↳ {subtask.title}
-            	  	  </td>
+                      ↳ {subtask.title}
+                    </td>
             	  	  <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 italic">
                           {/* Subtasks belong to the same project */}
                           {getProjectName(task.project)}
-                        </td>
+                    </td>
             	  	  <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
                           <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize `}>
                             {subtask.priority}
-                          </span>
-                      </td>
+                      </span>
+                    </td>
             	  	  <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 capitalize">
                           {subtask.status.replace("_", " ")}
-                      </td>
+                    </td>
             	  	  <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500">-</td> {/* Subtasks might not have due dates */}
             	  	  <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">
                           {/* Display subtask assignees */}
                           {(subtask.assignees || []).map((assignee: any) =>
                             typeof assignee === 'object' ? assignee.name : assignee // Display name or ID
                           ).join(", ") || '-'}
-                      </td>
-            	  	</tr>
-            	  ))}
-          	</React.Fragment>
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
         	)) : (
               // Message when no tasks match filters
               <tr>
@@ -463,11 +463,11 @@ const TasksView: React.FC<TasksViewProps> = ({
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 export default TasksView;
