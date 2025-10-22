@@ -1,96 +1,3 @@
-// import apiClient from "./apiClient";
-// import type { Deliverable } from "../types/deliverable";
-
-// export const createDeliverable = async (
-//   projectId: string,
-//   data: Omit<
-//     Deliverable,
-//     "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"
-//   >
-// ): Promise<Deliverable> => {
-//   try {
-//     console.log("Creating deliverable with data:", data);
-
-//     const response = await apiClient.post(
-//       `/api/projects/${projectId}/deliverables`,
-//       data
-//     );
-//     return response.data;
-//   } catch (error: any) {
-//     console.error("Create deliverable error:", JSON.stringify(error, null, 2));
-//     throw new Error(
-//       error.response?.data?.error || "Failed to create deliverable"
-//     );
-//   }
-// };
-
-// export const getDeliverables = async (
-//   projectId: string
-// ): Promise<Deliverable[]> => {
-//   try {
-//     const response = await apiClient.get(
-//       `/api/projects/${projectId}/deliverables`
-//     );
-//     return response.data;
-//   } catch (error: any) {
-//     console.error("Get deliverables error:", JSON.stringify(error, null, 2));
-//     throw new Error(
-//       error.response?.data?.error || "Failed to fetch deliverables"
-//     );
-//   }
-// };
-
-// export const getDeliverable = async (
-//   projectId: string,
-//   deliverableId: string
-// ): Promise<Deliverable> => {
-//   try {
-//     const response = await apiClient.get(
-//       `/api/projects/${projectId}/deliverables/${deliverableId}`
-//     );
-//     return response.data;
-//   } catch (error: any) {
-//     console.error("Get deliverable error:", JSON.stringify(error, null, 2));
-//     throw new Error(
-//       error.response?.data?.error || "Failed to fetch deliverable"
-//     );
-//   }
-// };
-
-// export const updateDeliverable = async (
-//   projectId: string,
-//   deliverableId: string,
-//   data: Partial<Deliverable>
-// ): Promise<Deliverable> => {
-//   try {
-//     const response = await apiClient.put(
-//       `/api/projects/${projectId}/deliverables/${deliverableId}`,
-//       data
-//     );
-//     return response.data;
-//   } catch (error: any) {
-//     console.error("Update deliverable error:", JSON.stringify(error, null, 2));
-//     throw new Error(
-//       error.response?.data?.error || "Failed to update deliverable"
-//     );
-//   }
-// };
-
-// export const deleteDeliverable = async (
-//   projectId: string,
-//   deliverableId: string
-// ): Promise<void> => {
-//   try {
-//     await apiClient.delete(
-//       `/api/projects/${projectId}/deliverables/${deliverableId}`
-//     );
-//   } catch (error: any) {
-//     console.error("Delete deliverable error:", JSON.stringify(error, null, 2));
-//     throw new Error(
-//       error.response?.data?.error || "Failed to delete deliverable"
-//     );
-//   }
-// };
 import apiClient from "./apiClient";
 import type { Deliverable } from "../types/deliverable";
 
@@ -98,8 +5,8 @@ export const createDeliverable = async (
   projectId: string,
   data: Omit<
     Deliverable,
-    "_id" | "id" | "project" | "createdAt" | "updatedAt"
-  > & { createdBy: string }
+    "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"
+  >
 ): Promise<Deliverable> => {
   try {
     console.log("Creating deliverable with data:", data);
@@ -108,23 +15,12 @@ export const createDeliverable = async (
       `/api/projects/${projectId}/deliverables`,
       data
     );
-    
-    // Handle nested response structure from backend
-    return response.data.success ? response.data.data : response.data;
+    return response.data;
   } catch (error: any) {
-    console.error("Create deliverable error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
-    
-    const errorMessage = 
-      error.response?.data?.message || 
-      error.response?.data?.error ||
-      error.response?.data?.errors?.[0] ||
-      "Failed to create deliverable";
-    
-    throw new Error(errorMessage);
+    console.error("Create deliverable error:", JSON.stringify(error, null, 2));
+    throw new Error(
+      error.response?.data?.error || "Failed to create deliverable"
+    );
   }
 };
 
@@ -135,17 +31,11 @@ export const getDeliverables = async (
     const response = await apiClient.get(
       `/api/projects/${projectId}/deliverables`
     );
-    return Array.isArray(response.data) ? response.data : [];
+    return response.data;
   } catch (error: any) {
-    console.error("Get deliverables error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    console.error("Get deliverables error:", JSON.stringify(error, null, 2));
     throw new Error(
-      error.response?.data?.message || 
-      error.response?.data?.error || 
-      "Failed to fetch deliverables"
+      error.response?.data?.error || "Failed to fetch deliverables"
     );
   }
 };
@@ -160,15 +50,9 @@ export const getDeliverable = async (
     );
     return response.data;
   } catch (error: any) {
-    console.error("Get deliverable error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    console.error("Get deliverable error:", JSON.stringify(error, null, 2));
     throw new Error(
-      error.response?.data?.message || 
-      error.response?.data?.error || 
-      "Failed to fetch deliverable"
+      error.response?.data?.error || "Failed to fetch deliverable"
     );
   }
 };
@@ -185,15 +69,9 @@ export const updateDeliverable = async (
     );
     return response.data;
   } catch (error: any) {
-    console.error("Update deliverable error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    console.error("Update deliverable error:", JSON.stringify(error, null, 2));
     throw new Error(
-      error.response?.data?.message || 
-      error.response?.data?.error || 
-      "Failed to update deliverable"
+      error.response?.data?.error || "Failed to update deliverable"
     );
   }
 };
@@ -207,15 +85,9 @@ export const deleteDeliverable = async (
       `/api/projects/${projectId}/deliverables/${deliverableId}`
     );
   } catch (error: any) {
-    console.error("Delete deliverable error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    console.error("Delete deliverable error:", JSON.stringify(error, null, 2));
     throw new Error(
-      error.response?.data?.message || 
-      error.response?.data?.error || 
-      "Failed to delete deliverable"
+      error.response?.data?.error || "Failed to delete deliverable"
     );
   }
 };
