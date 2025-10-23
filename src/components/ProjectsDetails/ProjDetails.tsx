@@ -459,5 +459,4 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
     </div>
   );
 };
-
 export default ProjectDetailsView;
