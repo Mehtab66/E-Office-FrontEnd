@@ -2534,7 +2534,8 @@ const ManagerDashboard: React.FC = () => {
       {showAddTaskModal && (
         <AddTaskModal
           projects={projects}
-          selectedProject={selectedProjectForTask || undefined}
+          // Use the state variable (keep original name if you didn't rename)
+          selectedProject={selectedProjectForTask || undefined} 
           editingTask={editingTask}
           employee={
             user || {
@@ -2552,10 +2553,20 @@ const ManagerDashboard: React.FC = () => {
           onSubmit={editingTask ? handleEditTask : handleAddTask}
           onClose={() => {
             setShowAddTaskModal(false);
-            setSelectedProjectForTask(null);
+            // Use the state variable (keep original name if you didn't rename)
+            setSelectedProjectForTask(null); 
             setEditingTask(null);
           }}
-          tasks={tasksData as Task[]}
+          // --- FIX 1: Pass tasksData directly ---
+          tasks={tasksData as Task[]} 
+          
+          // --- FIX 2: Add the onChangeProject prop ---
+          onChangeProject={(projectId: string) => {
+            const newSelectedProject = projects.find(p => p._id === projectId) || null;
+            // Use the state variable (keep original name if you didn't rename)
+            setSelectedProjectForTask(newSelectedProject); 
+          }}
+          // --- END OF FIXES ---
         />
       )}
     </div>
