@@ -1,3 +1,337 @@
+// // import React, { useEffect, useState } from "react";
+// // import { useQueryClient } from "@tanstack/react-query";
+// // import Sidebar from "../../components/EmployeeSidebar/Sidebar";
+// // import DashboardView from "../../components/EmployeeDashboardView/DashboardView";
+// // import ProjectsView from "../../components/ProjectViews/ProjectView";
+// // import TasksView from "../../components/EmployeeTasks/Tasks";
+// // import TimesheetsView from "../../components/EmployeeTimeSheet/TimeSheet";
+// // import ProjectDetailsView from "../../components/ProjectsDetails/ProjDetails";
+// // import AddTimeEntryModal from "../../components/AddTimeEntryModal/TimeEntry";
+// // import AddTaskModal from "../../components/AddTask/AddTask";
+// // import AddDeliverableModal from "../../components/AddDeliverbles/AddDeliveryModal";
+// // import { useCurrentUser } from "../../apis/authService";
+// // import { useGetProjects } from "../../hooks/useProject";
+// // import { useGetAllTasks } from "../../hooks/useTask";
+// // import { useGetAllTimeEntries } from "../../hooks/useTimeEntry";
+// // import { useGetDeliverables } from "../../hooks/useDeliverable";
+// // import { useCreateTask, useCreateSubtask } from "../../hooks/useTask";
+// // import { useCreateTimeEntry, useDeleteTimeEntry } from "../../hooks/useTimeEntry";
+// // import type { Task, Subtask } from "../../types/task";
+// // import type { TimeEntry } from "../../types/timeEntry";
+// // import type { Project } from "../../types/project";
+// // import type { User } from "../../apis/authService";
+
+// // // Helper functions (no changes needed)
+// // const getEmployeeId = (employee: User | null | undefined): string => {
+// //   if (!employee) return "";
+// //   return (employee as any).id || employee._id || "";
+// // };
+// // const getEmployeeProjects = (employee: User | null | undefined): string[] => {
+// //   if (!employee) return [];
+// //   return "projects" in employee ? (employee as any).projects || [] : [];
+// // };
+
+// // const EmployeeDashboard: React.FC = () => {
+// //   const [sidebarOpen, setSidebarOpen] = useState(false);
+// //   const [activeView, setActiveView] = useState("dashboard");
+// //   const [showAddTimeModal, setShowAddTimeModal] = useState(false);
+// //   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+// //   const [selectedProjectForTask, setSelectedProjectForTask] = useState<Project | null>(null);
+// //   const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
+// //   const [editTimeEntry, setEditTimeEntry] = useState<TimeEntry | undefined>(undefined);
+// //   const [priorityFilter, setPriorityFilter] = useState("");
+// //   const [statusFilter, setStatusFilter] = useState("");
+// //   const [projectFilter, setProjectFilter] = useState("");
+// //   const [dateFrom, setDateFrom] = useState("");
+// //   const [dateTo, setDateTo] = useState("");
+// //   const queryClient = useQueryClient();
+
+// //   // Data fetching hooks (no changes needed)
+// //   const { data: employee, isLoading: isEmployeeLoading, error: employeeError } = useCurrentUser();
+// //   const { data: projectsData, isLoading: isProjectsLoading, error: projectsError } = useGetProjects();
+// //   const projects = projectsData?.projects || [];
+// //   const { data: tasksData, isLoading: isTasksLoading, error: tasksError } = useGetAllTasks({
+// //     projectId: projectFilter || undefined,
+// //     priority: priorityFilter || undefined,
+// //     status: statusFilter || undefined,
+// //   });
+// //   const tasks = tasksData?.tasks || [];
+// //   const { data: timeEntriesData, isLoading: isTimeEntriesLoading, error: timeEntriesError } = useGetAllTimeEntries({
+// //     projectId: projectFilter || undefined,
+// //     dateFrom: dateFrom || undefined,
+// //     dateTo: dateTo || undefined,
+// //   });
+// //   const timeEntries = timeEntriesData?.timeEntries || [];
+// //   const projectId = activeView.startsWith("project-") ? activeView.split("project-")[1] : "";
+// //   const { data: deliverables, isLoading: isDeliverablesLoading, error: deliverablesError } = useGetDeliverables(projectId, {
+// //     enabled: !!projectId,
+// //   });
+
+// //   // Mutations (no changes needed)
+// //   const createTimeEntry = useCreateTimeEntry();
+// //   const deleteTimeEntry = useDeleteTimeEntry();
+// //   const createTask = useCreateTask();
+// //   const createSubtask = useCreateSubtask();
+
+// //   // Employee project filtering (no changes needed)
+// //   const employeeProjects = projects.filter((project: Project) => {
+// //     const employeeId = getEmployeeId(employee);
+// //     if (!employeeId) return false;
+// //     const teamLeadId = typeof project.teamLead === "string" ? project.teamLead : project.teamLead?._id || project.teamLead?.id;
+// //     const teamMemberIds = project.teamMembers.map((member) => typeof member === "string" ? member : member._id || member.id);
+// //     const projectIds = getEmployeeProjects(employee);
+// //     return teamMemberIds.includes(employeeId) || teamLeadId === employeeId || projectIds.includes((project._id || project.id || "").toString());
+// //   });
+
+// //   // Debugging useEffects (can be removed if not needed)
+// //   useEffect(() => {
+// //     if (employee && projects.length > 0) {
+// //       console.log("Employee ID:", employee.id);
+// //       const teamLeadProjects = projects.filter((p) => {
+// //         const teamLeadId = typeof p.teamLead === "string" ? p.teamLead : p.teamLead?._id || p.teamLead?.id;
+// //         return teamLeadId === employee.id;
+// //       });
+// //       console.log("Team Lead Projects Count:", teamLeadProjects.length);
+// //     }
+// //   }, [employee, projects]);
+// //   useEffect(() => {
+// //     console.log("Project updated in EmployeeDashboard:", projectsData);
+// //     console.log("Employee:", employee);
+// //     console.log("EmployeeProjects:", employeeProjects);
+// //     if (projects.length > 0 && employee) {
+// //       projects.forEach((project: Project) => {
+// //         const teamLeadId = typeof project.teamLead === "string" ? project.teamLead : project.teamLead?._id || project.teamLead?.id;
+// //         const teamMemberIds = project.teamMembers.map((member) => typeof member === "string" ? member : member._id || member.id);
+// //         console.log("Filtering project:", {
+// //           projectId: project._id || project.id,
+// //           projectName: project.name,
+// //           teamLeadId,
+// //           teamMemberIds,
+// //           employeeId: getEmployeeId(employee),
+// //           employeeProjects: getEmployeeProjects(employee),
+// //           isIncluded: employeeProjects.some((p) => p._id === project._id || p.id === project.id),
+// //         });
+// //       });
+// //     }
+// //   }, [projectsData, employee, employeeProjects]);
+
+// //   // ***** CORRECTED handleAddTimeEntry *****
+// //   // Changed the type annotation of 'data' to match what the modal now sends
+// //   const handleAddTimeEntry = (formData: {
+// //     projectId: string;
+// //     data: Omit< // Ensure this type matches what the modal sends and the hook expects
+// //       TimeEntry,
+// //       "_id" | "user" | "project" | "createdAt" | "updatedAt"
+// //     >;
+// //   }) => {
+// //     if (editTimeEntry) {
+// //       // If you implement update logic, it will go here.
+// //       // Make sure useUpdateTimeEntry expects { projectId, timeEntryId, data }
+// //       // updateTimeEntry.mutate({ projectId: formData.projectId, timeEntryId: editTimeEntry._id, data: formData.data }, { ... });
+// //       console.log("Update logic not implemented yet.");
+// //       return;
+// //     }
+
+// //     // Call the mutation with the exact structure the useCreateTimeEntry hook expects:
+// //     // { projectId: string, data: object }
+// //     createTimeEntry.mutate(
+// //       {
+// //         projectId: formData.projectId, // Use projectId from the received formData
+// //         data: formData.data,           // Use data from the received formData
+// //       },
+// //       {
+// //         onSuccess: () => {
+// //           setShowAddTimeModal(false);
+// //           setEditTimeEntry(undefined); // Reset edit state on successful creation
+// //           // No need to invalidate queries here; the hook handles it.
+// //         },
+// //         onError: (error) => {
+// //           // Error is already logged by the hook and shown via toast
+// //           console.error("Mutation error handled by hook:", error);
+// //         }
+// //       }
+// //     );
+// //   };
+// //   // ***** END OF CORRECTED handleAddTimeEntry *****
+
+// //   // Other handlers (no changes needed)
+// //   const handleDeleteTimeEntry = (projectId: string, timeEntryId: string) => {
+// //     deleteTimeEntry.mutate(
+// //       { projectId, timeEntryId },
+// //       {
+// //         onSuccess: () => {
+// //           // Hook handles invalidation
+// //         },
+// //       }
+// //     );
+// //   };
+// //   const handleAddTask = (data: {
+// //     title: string; description?: string; project: string; assignedTo?: string;
+// //     priority: "urgent" | "high" | "medium" | "low"; status: "todo" | "in_progress" | "done";
+// //     dueDate?: string; isSubtask?: boolean; parentTaskId?: string;
+// //   }) => {
+// //     if (data.isSubtask && data.parentTaskId) {
+// //       const subtaskData: Omit<Subtask, "_id" | "createdAt" | "updatedAt"> = {
+// //         title: data.title, status: data.status, priority: data.priority,
+// //         assignees: data.assignedTo ? [data.assignedTo] : [],
+// //       };
+// //       createSubtask.mutate(
+// //         { projectId: data.project, taskId: data.parentTaskId, data: subtaskData },
+// //         { onSuccess: () => { setShowAddTaskModal(false); /* Hook handles invalidation */ } }
+// //       );
+// //     } else {
+// //       const taskData: Omit<Task, "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"> = {
+// //         title: data.title, description: data.description, priority: data.priority,
+// //         status: data.status, dueDate: data.dueDate, assignedTo: data.assignedTo ?? "", subtasks: [],
+// //       };
+// //       createTask.mutate(
+// //         { projectId: data.project, data: taskData },
+// //         { onSuccess: () => { setShowAddTaskModal(false); /* Hook handles invalidation */ } }
+// //       );
+// //     }
+// //   };
+
+// //   // Render function (no changes needed)
+// //   const renderMainContent = () => {
+// //     if (isEmployeeLoading || isProjectsLoading || isTasksLoading || isTimeEntriesLoading) {
+// //       return <div>Loading...</div>;
+// //     }
+// //     if (employeeError || projectsError || tasksError || timeEntriesError) {
+// //       return <div>Error loading data. Please try again.</div>;
+// //     }
+// //     if (!employee) {
+// //       return <div>User not authenticated.</div>;
+// //     }
+
+// //     // Filtering logic (no changes needed)
+// //     const filteredTasks = tasks.filter((task) => {
+// //       const taskProjectId = typeof task.project === "string" ? task.project : task.project?._id || task.project?.id || "";
+// //       return (!priorityFilter || task.priority === priorityFilter) && (!statusFilter || task.status === statusFilter) && (!projectFilter || taskProjectId === projectFilter);
+// //     });
+// //     const filteredTimeEntries = timeEntries.filter((entry) => {
+// //       const entryProjectId = typeof entry.project === "string" ? entry.project : entry.project?._id || entry.project?.id || "";
+// //       const entryUserId = typeof entry.user === "string" ? entry.user : entry.user?._id || (entry.user as any)?.id || "";
+// //       return entryUserId === getEmployeeId(employee) && (!projectFilter || entryProjectId === projectFilter) && (!dateFrom || new Date(entry.date) >= new Date(dateFrom)) && (!dateTo || new Date(entry.date) <= new Date(dateTo));
+// //     });
+
+// //     // View rendering logic (no changes needed)
+// //     if (activeView.startsWith("project-")) {
+// //       const project = projects.find((p) => p._id === projectId || p.id === projectId);
+// //       if (!project) return <div>Project not found</div>;
+// //       return (
+// //         <ProjectDetailsView
+// //           projects={[project]}
+// //           deliverables={deliverables?.filter((d) => {
+// //             const deliverableProjectId = typeof d.project === "string" ? d.project : d.project?._id || d.project?.id || "";
+// //             return deliverableProjectId === projectId;
+// //           }) || []}
+// //           employee={employee}
+// //           onAddTask={(project) => { setSelectedProjectForTask(project); setShowAddTaskModal(true); }}
+// //           onAddDeliverable={() => setShowAddDeliverableModal(true)}
+// //           setActiveView={setActiveView}
+// //         />
+// //       );
+// //     }
+// //     switch (activeView) {
+// //       case "dashboard":
+// //         return (
+// //           <DashboardView
+// //             employee={employee} projects={employeeProjects} tasks={filteredTasks}
+// //             timeEntries={filteredTimeEntries} setActiveView={setActiveView}
+// //             onAddTime={() => { setEditTimeEntry(undefined); setShowAddTimeModal(true); }}
+// //           />
+// //         );
+// //       case "projects":
+// //         return (
+// //           <ProjectsView
+// //             projects={employeeProjects} employee={employee} setActiveView={setActiveView}
+// //             onAddTask={(project) => { setSelectedProjectForTask(project || null); setShowAddTaskModal(true); }}
+// //             onAddDeliverable={() => { /* See original comment */ }}
+// //           />
+// //         );
+// //       case "tasks":
+// //         return (
+// //           <TasksView
+// //             tasks={filteredTasks} projects={employeeProjects} employee={employee}
+// //             priorityFilter={priorityFilter} statusFilter={statusFilter} projectFilter={projectFilter}
+// //             setPriorityFilter={setPriorityFilter} setStatusFilter={setStatusFilter} setProjectFilter={setProjectFilter}
+// //             onAddTask={(project) => { setSelectedProjectForTask(project); setShowAddTaskModal(true); }}
+// //           />
+// //         );
+// //       case "timesheets":
+// //         return (
+// //           <TimesheetsView
+// //             timeEntries={filteredTimeEntries} projects={employeeProjects} projectFilter={projectFilter}
+// //             dateFrom={dateFrom} dateTo={dateTo} setProjectFilter={setProjectFilter}
+// //             setDateFrom={setDateFrom} setDateTo={setDateTo}
+// //             onAddTime={() => { setEditTimeEntry(undefined); setShowAddTimeModal(true); }}
+// //             onEditTime={(entry) => { setEditTimeEntry(entry); setShowAddTimeModal(true); }}
+// //             onDeleteTime={handleDeleteTimeEntry}
+// //           />
+// //         );
+// //       default: return null;
+// //     }
+// //   };
+
+// //   // Fallback employee (no changes needed)
+// //   const fallbackEmployee: User = {
+// //     _id: "", name: "", role: "employee", email: "", phone: "", grade: 0, designation: "", cnic: "", projects: [],
+// //   };
+
+// //   // Main component return (JSX, no changes needed)
+// //   return (
+// //     <div className="min-h-screen bg-gray-100 flex">
+// //       <Sidebar
+// //         employee={employee || fallbackEmployee} activeView={activeView} setActiveView={setActiveView}
+// //         sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
+// //       />
+// //       <div className="flex-1 md:ml-64">
+// //         <div className="p-6">
+// //           <button
+// //             className="md:hidden mb-4 p-2 bg-indigo-600 text-white rounded-lg"
+// //             onClick={() => setSidebarOpen(!sidebarOpen)}
+// //           >
+// //             {sidebarOpen ? "Close Menu" : "Open Menu"}
+// //           </button>
+// //           {renderMainContent()}
+// //         </div>
+// //       </div>
+// //       {/* Modals (no changes needed) */}
+// //       {showAddTimeModal && (
+// //         <AddTimeEntryModal
+// //           projects={employeeProjects}
+// //           employee={employee || fallbackEmployee}
+// //           // The corrected onSubmit prop is passed here
+// //           onSubmit={handleAddTimeEntry}
+// //           onClose={() => { setShowAddTimeModal(false); setEditTimeEntry(undefined); }} // Also clear edit state on close
+// //           initialData={editTimeEntry}
+// //         />
+// //       )}
+// //       {showAddTaskModal && (
+// //         <AddTaskModal
+// //           projects={selectedProjectForTask ? employeeProjects.filter((p) => {
+// //             const teamLeadId = typeof p.teamLead === "string" ? p.teamLead : p.teamLead?._id || p.teamLead?.id;
+// //             return teamLeadId === getEmployeeId(employee);
+// //           }) : employeeProjects}
+// //           selectedProject={selectedProjectForTask || undefined}
+// //           employee={employee || fallbackEmployee}
+// //           onSubmit={handleAddTask}
+// //           onClose={() => { setShowAddTaskModal(false); setSelectedProjectForTask(null); }}
+// //           tasks={tasks} // Pass tasks for parent task selection if adding subtask
+// //         />
+// //       )}
+// //       {showAddDeliverableModal && (
+// //         <AddDeliverableModal
+// //           projectId={projectId} // Use the projectId derived from activeView
+// //           employee={employee || fallbackEmployee}
+// //           onClose={() => setShowAddDeliverableModal(false)}
+// //         />
+// //       )}
+// //     </div>
+// //   );
+// // };
+
+// // export default EmployeeDashboard;
 
 // import React, { useEffect, useState } from "react";
 // import { useQueryClient } from "@tanstack/react-query";
@@ -10,33 +344,23 @@
 // import AddTimeEntryModal from "../../components/AddTimeEntryModal/TimeEntry";
 // import AddTaskModal from "../../components/AddTask/AddTask";
 // import AddDeliverableModal from "../../components/AddDeliverbles/AddDeliveryModal";
-// // import EmployeeDashboardStats from "../../components/EmployeeDashboardStats/EmployeeDashboardStats"; // This component was imported but not used, uncomment if needed
 // import { useCurrentUser } from "../../apis/authService";
 // import { useGetProjects } from "../../hooks/useProject";
 // import { useGetAllTasks } from "../../hooks/useTask";
 // import { useGetAllTimeEntries } from "../../hooks/useTimeEntry";
-// import {
-//   useGetDeliverables,
-//   // useCreateDeliverable, // This is now handled inside AddDeliverableModal
-// } from "../../hooks/useDeliverable";
+// import { useGetDeliverables } from "../../hooks/useDeliverable";
 // import { useCreateTask, useCreateSubtask } from "../../hooks/useTask";
-// import {
-//   useCreateTimeEntry,
-//   useDeleteTimeEntry,
-// } from "../../hooks/useTimeEntry";
+// import { useCreateTimeEntry, useDeleteTimeEntry } from "../../hooks/useTimeEntry";
 // import type { Task, Subtask } from "../../types/task";
 // import type { TimeEntry } from "../../types/timeEntry";
 // import type { Project } from "../../types/project";
 // import type { User } from "../../apis/authService";
 
-// // Create a helper function to get the employee ID
+// // Helper functions (no changes needed)
 // const getEmployeeId = (employee: User | null | undefined): string => {
 //   if (!employee) return "";
-//   // Handle both _id and id fields
 //   return (employee as any).id || employee._id || "";
 // };
-
-// // Create a helper function to get the employee projects
 // const getEmployeeProjects = (employee: User | null | undefined): string[] => {
 //   if (!employee) return [];
 //   return "projects" in employee ? (employee as any).projects || [] : [];
@@ -47,134 +371,72 @@
 //   const [activeView, setActiveView] = useState("dashboard");
 //   const [showAddTimeModal, setShowAddTimeModal] = useState(false);
 //   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
-//   const [selectedProjectForTask, setSelectedProjectForTask] =
-//     useState<Project | null>(null);
+//   const [selectedProjectForTask, setSelectedProjectForTask] = useState<Project | null>(null);
 //   const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
-//   const [editTimeEntry, setEditTimeEntry] = useState<TimeEntry | undefined>(
-//     undefined
-//   );
-
+//   const [editTimeEntry, setEditTimeEntry] = useState<TimeEntry | undefined>(undefined);
 //   const [priorityFilter, setPriorityFilter] = useState("");
 //   const [statusFilter, setStatusFilter] = useState("");
 //   const [projectFilter, setProjectFilter] = useState("");
 //   const [dateFrom, setDateFrom] = useState("");
 //   const [dateTo, setDateTo] = useState("");
-
 //   const queryClient = useQueryClient();
 
-//   // Fetch current employee
-//   const {
-//     data: employee,
-//     isLoading: isEmployeeLoading,
-//     error: employeeError,
-//   } = useCurrentUser();
-
-//   // Fetch projects
-//   const {
-//     data: projectsData,
-//     isLoading: isProjectsLoading,
-//     error: projectsError,
-//   } = useGetProjects();
+//   // Data fetching hooks (no changes needed)
+//   const { data: employee, isLoading: isEmployeeLoading, error: employeeError } = useCurrentUser();
+//   const { data: projectsData, isLoading: isProjectsLoading, error: projectsError } = useGetProjects();
 //   const projects = projectsData?.projects || [];
-
-//   // Fetch tasks with filters
-//   const {
-//     data: tasksData,
-//     isLoading: isTasksLoading,
-//     error: tasksError,
-//   } = useGetAllTasks({
+//   const { data: tasksData, isLoading: isTasksLoading, error: tasksError } = useGetAllTasks({
 //     projectId: projectFilter || undefined,
 //     priority: priorityFilter || undefined,
 //     status: statusFilter || undefined,
 //   });
 //   const tasks = tasksData?.tasks || [];
-
-//   // Fetch time entries with filters
-//   const {
-//     data: timeEntriesData,
-//     isLoading: isTimeEntriesLoading,
-//     error: timeEntriesError,
-//   } = useGetAllTimeEntries({
+//   const { data: timeEntriesData, isLoading: isTimeEntriesLoading, error: timeEntriesError } = useGetAllTimeEntries({
 //     projectId: projectFilter || undefined,
 //     dateFrom: dateFrom || undefined,
 //     dateTo: dateTo || undefined,
 //   });
 //   const timeEntries = timeEntriesData?.timeEntries || [];
-
-//   // Fetch deliverables for specific project
-//   // FIXED: Extracted projectId logic to be reused for the modal
-//   const projectId = activeView.startsWith("project-")
-//     ? activeView.split("project-")[1]
-//     : "";
-//   const {
-//     data: deliverables,
-//     isLoading: isDeliverablesLoading,
-//     error: deliverablesError,
-//   } = useGetDeliverables(projectId, {
+//   const projectId = activeView.startsWith("project-") ? activeView.split("project-")[1] : "";
+//   const { data: deliverables, isLoading: isDeliverablesLoading, error: deliverablesError } = useGetDeliverables(projectId, {
 //     enabled: !!projectId,
 //   });
 
-//   // Mutations
+//   // Mutations (no changes needed)
 //   const createTimeEntry = useCreateTimeEntry();
 //   const deleteTimeEntry = useDeleteTimeEntry();
 //   const createTask = useCreateTask();
 //   const createSubtask = useCreateSubtask();
-//   // const createDeliverable = useCreateDeliverable(); // This is now handled inside AddDeliverableModal
 
-//   // Filter projects for employee (team lead, member, or in employee.projects)
+//   // Employee project filtering (no changes needed)
 //   const employeeProjects = projects.filter((project: Project) => {
 //     const employeeId = getEmployeeId(employee);
 //     if (!employeeId) return false;
-
-//     const teamLeadId =
-//       typeof project.teamLead === "string"
-//         ? project.teamLead
-//         : project.teamLead?._id || project.teamLead?.id;
-
-//     const teamMemberIds = project.teamMembers.map((member) =>
-//       typeof member === "string" ? member : member._id || member.id
-//     );
-
+//     const teamLeadId = typeof project.teamLead === "string" ? project.teamLead : project.teamLead?._id || project.teamLead?.id;
+//     const teamMemberIds = project.teamMembers.map((member) => typeof member === "string" ? member : member._id || member.id);
 //     const projectIds = getEmployeeProjects(employee);
-
-//     return (
-//       teamMemberIds.includes(employeeId) ||
-//       teamLeadId === employeeId ||
-//       projectIds.includes((project._id || project.id || "").toString())
-//     );
+//     return teamMemberIds.includes(employeeId) || teamLeadId === employeeId || projectIds.includes((project._id || project.id || "").toString());
 //   });
-//   // Add this to your EmployeeDashboard component
+
+//   // Debugging useEffects (can be removed if not needed)
 //   useEffect(() => {
 //     if (employee && projects.length > 0) {
 //       console.log("Employee ID:", employee.id);
-
 //       const teamLeadProjects = projects.filter((p) => {
-//         const teamLeadId =
-//           typeof p.teamLead === "string"
-//             ? p.teamLead
-//             : p.teamLead?._id || p.teamLead?.id;
-//         // console.log("Project:", p.name, "Team Lead ID:", teamLeadId); // Reduced console noise
+//         const teamLeadId = typeof p.teamLead === "string" ? p.teamLead : p.teamLead?._id || p.teamLead?.id;
 //         return teamLeadId === employee.id;
 //       });
-
 //       console.log("Team Lead Projects Count:", teamLeadProjects.length);
-//       // console.log("Team Lead Projects:", teamLeadProjects); // Reduced console noise
 //     }
 //   }, [employee, projects]);
-
 //   useEffect(() => {
 //     console.log("Project updated in EmployeeDashboard:", projectsData);
 //     console.log("Employee:", employee);
 //     console.log("EmployeeProjects:", employeeProjects);
 //     if (projects.length > 0 && employee) {
 //       projects.forEach((project: Project) => {
-//         const teamLeadId =
-//           typeof project.teamLead === "string"
-//             ? project.teamLead
-//             : project.teamLead?._id || project.teamLead?.id;
-//         const teamMemberIds = project.teamMembers.map((member) =>
-//           typeof member === "string" ? member : member._id || member.id
-//         );
+//         const teamLeadId = typeof project.teamLead === "string" ? project.teamLead : project.teamLead?._id || project.teamLead?.id;
+//         const teamMemberIds = project.teamMembers.map((member) => typeof member === "string" ? member : member._id || member.id);
 //         console.log("Filtering project:", {
 //           projectId: project._id || project.id,
 //           projectName: project.name,
@@ -182,314 +444,182 @@
 //           teamMemberIds,
 //           employeeId: getEmployeeId(employee),
 //           employeeProjects: getEmployeeProjects(employee),
-//           isIncluded: employeeProjects.some(
-//             (p) => p._id === project._id || p.id === project.id
-//           ),
+//           isIncluded: employeeProjects.some((p) => p._id === project._id || p.id === project.id),
 //         });
 //       });
 //     }
 //   }, [projectsData, employee, employeeProjects]);
 
-//   const handleAddTimeEntry = (
-//     data: Omit<
+//   // ***** CORRECTED handleAddTimeEntry *****
+//   // Changed the type annotation of 'data' to match what the modal now sends
+//   const handleAddTimeEntry = (formData: {
+//     projectId: string;
+//     data: Omit< // Ensure this type matches what the modal sends and the hook expects
 //       TimeEntry,
 //       "_id" | "user" | "project" | "createdAt" | "updatedAt"
-//     >
-//   ) => {
+//     >;
+//   }) => {
 //     if (editTimeEntry) {
-//       // Update handled separately if needed
+//       // If you implement update logic, it will go here.
+//       // Make sure useUpdateTimeEntry expects { projectId, timeEntryId, data }
+//       // updateTimeEntry.mutate({ projectId: formData.projectId, timeEntryId: editTimeEntry._id, data: formData.data }, { ... });
+//       console.log("Update logic not implemented yet.");
 //       return;
 //     }
+
+//     // Call the mutation with the exact structure the useCreateTimeEntry hook expects:
+//     // { projectId: string, data: object }
 //     createTimeEntry.mutate(
 //       {
-//         projectId: (data as any).project,
-//         data: {
-//           ...data,
-//           id: (data as any).id ?? "",
-//           title: (data as any).title ?? "",
-//           approved: (data as any).approved ?? false,
-//         },
+//         projectId: formData.projectId, // Use projectId from the received formData
+//         data: formData.data,           // Use data from the received formData
 //       },
 //       {
 //         onSuccess: () => {
 //           setShowAddTimeModal(false);
-//           queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-//           queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+//           setEditTimeEntry(undefined); // Reset edit state on successful creation
+//           // No need to invalidate queries here; the hook handles it.
 //         },
+//         onError: (error) => {
+//           // Error is already logged by the hook and shown via toast
+//           console.error("Mutation error handled by hook:", error);
+//         }
 //       }
 //     );
 //   };
+//   // ***** END OF CORRECTED handleAddTimeEntry *****
 
+//   // Other handlers (no changes needed)
 //   const handleDeleteTimeEntry = (projectId: string, timeEntryId: string) => {
 //     deleteTimeEntry.mutate(
 //       { projectId, timeEntryId },
 //       {
 //         onSuccess: () => {
-//           queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-//           queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+//           // Hook handles invalidation
 //         },
 //       }
 //     );
 //   };
-
 //   const handleAddTask = (data: {
-//     title: string;
-//     description?: string;
-//     project: string;
-//     assignedTo?: string;
-//     priority: "urgent" | "high" | "medium" | "low";
-//     status: "todo" | "in_progress" | "done";
-//     dueDate?: string;
-//     isSubtask?: boolean;
-//     parentTaskId?: string;
+//     title: string; description?: string; project: string; assignedTo?: string;
+//     priority: "urgent" | "high" | "medium" | "low"; status: "todo" | "in_progress" | "done";
+//     dueDate?: string; isSubtask?: boolean; parentTaskId?: string;
 //   }) => {
 //     if (data.isSubtask && data.parentTaskId) {
 //       const subtaskData: Omit<Subtask, "_id" | "createdAt" | "updatedAt"> = {
-//         title: data.title,
-//         status: data.status,
-//         priority: data.priority,
+//         title: data.title, status: data.status, priority: data.priority,
 //         assignees: data.assignedTo ? [data.assignedTo] : [],
 //       };
 //       createSubtask.mutate(
-//         {
-//           projectId: data.project,
-//           taskId: data.parentTaskId,
-//           data: subtaskData,
-//         },
-//         {
-//           onSuccess: () => {
-//             setShowAddTaskModal(false);
-//             queryClient.invalidateQueries({ queryKey: ["tasks"] });
-//             queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
-//           },
-//         }
+//         { projectId: data.project, taskId: data.parentTaskId, data: subtaskData },
+//         { onSuccess: () => { setShowAddTaskModal(false); /* Hook handles invalidation */ } }
 //       );
 //     } else {
-//       const taskData: Omit<
-//         Task,
-//         "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"
-//       > = {
-//         title: data.title,
-//         description: data.description,
-//         priority: data.priority,
-//         status: data.status,
-//         dueDate: data.dueDate,
-//         assignedTo: data.assignedTo ?? "",
-//         subtasks: [],
+//       const taskData: Omit<Task, "_id" | "project" | "createdBy" | "createdAt" | "updatedAt"> = {
+//         title: data.title, description: data.description, priority: data.priority,
+//         status: data.status, dueDate: data.dueDate, assignedTo: data.assignedTo ?? "", subtasks: [],
 //       };
 //       createTask.mutate(
 //         { projectId: data.project, data: taskData },
-//         {
-//           onSuccess: () => {
-//             setShowAddTaskModal(false);
-//             queryClient.invalidateQueries({ queryKey: ["tasks"] });
-//             queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
-//           },
-//         }
+//         { onSuccess: () => { setShowAddTaskModal(false); /* Hook handles invalidation */ } }
 //       );
 //     }
 //   };
 
-//   // FIXED: Removed this function. Submission logic is now fully encapsulated
-//   // within AddDeliverableModal.
-//   // const handleAddDeliverable = (...) => { ... };
-
+//   // Render function (no changes needed)
 //   const renderMainContent = () => {
-//     if (
-//       isEmployeeLoading ||
-//       isProjectsLoading ||
-//       isTasksLoading ||
-//       isTimeEntriesLoading
-//     ) {
+//     if (isEmployeeLoading || isProjectsLoading || isTasksLoading || isTimeEntriesLoading) {
 //       return <div>Loading...</div>;
 //     }
-
 //     if (employeeError || projectsError || tasksError || timeEntriesError) {
 //       return <div>Error loading data. Please try again.</div>;
 //     }
-
 //     if (!employee) {
 //       return <div>User not authenticated.</div>;
 //     }
 
+//     // Filtering logic (no changes needed)
 //     const filteredTasks = tasks.filter((task) => {
-//       const taskProjectId =
-//         typeof task.project === "string"
-//           ? task.project
-//           : task.project &&
-//             typeof task.project === "object" &&
-//             "id" in task.project
-//           ? (task.project as { id?: string; _id?: string })._id ||
-//             (task.project as { id?: string; _id?: string }).id ||
-//             ""
-//           : "";
-//       return (
-//         (!priorityFilter || task.priority === priorityFilter) &&
-//         (!statusFilter || task.status === statusFilter) &&
-//         (!projectFilter || taskProjectId === projectFilter)
-//       );
+//       const taskProjectId = typeof task.project === "string" ? task.project : task.project?._id || task.project?.id || "";
+//       return (!priorityFilter || task.priority === priorityFilter) && (!statusFilter || task.status === statusFilter) && (!projectFilter || taskProjectId === projectFilter);
 //     });
-
 //     const filteredTimeEntries = timeEntries.filter((entry) => {
-//       const entryProjectId =
-//         typeof entry.project === "string"
-//           ? entry.project
-//           : entry.project &&
-//             typeof entry.project === "object" &&
-//             "_id" in entry.project
-//           ? (entry.project as { _id?: string; id?: string })._id ||
-//             (entry.project as { _id?: string; id?: string }).id ||
-//             ""
-//           : "";
-//       const entryUserId =
-//         typeof entry.user === "string"
-//           ? entry.user
-//           : entry.user?._id || (entry.user as any)?.id || "";
-//       return (
-//         entryUserId === getEmployeeId(employee) &&
-//         (!projectFilter || entryProjectId === projectFilter) &&
-//         (!dateFrom || new Date(entry.date) >= new Date(dateFrom)) &&
-//         (!dateTo || new Date(entry.date) <= new Date(dateTo))
-//       );
+//       const entryProjectId = typeof entry.project === "string" ? entry.project : entry.project?._id || entry.project?.id || "";
+//       const entryUserId = typeof entry.user === "string" ? entry.user : entry.user?._id || (entry.user as any)?.id || "";
+//       return entryUserId === getEmployeeId(employee) && (!projectFilter || entryProjectId === projectFilter) && (!dateFrom || new Date(entry.date) >= new Date(dateFrom)) && (!dateTo || new Date(entry.date) <= new Date(dateTo));
 //     });
 
+//     // View rendering logic (no changes needed)
 //     if (activeView.startsWith("project-")) {
-//       // Note: projectId is already defined outside this function
-//       const project = projects.find(
-//         (p) => p._id === projectId || p.id === projectId
-//       );
+//       const project = projects.find((p) => p._id === projectId || p.id === projectId);
 //       if (!project) return <div>Project not found</div>;
 //       return (
 //         <ProjectDetailsView
-//           projects={[project]} // Assumes ProjectDetailsView can handle an array
-//           deliverables={
-//             deliverables?.filter((d) => {
-//               const deliverableProjectId =
-//                 typeof d.project === "string"
-//                   ? d.project
-//                   : d.project &&
-//                     typeof d.project === "object" &&
-//                     "_id" in d.project
-//                   ? (d.project as { _id?: string; id?: string })._id ||
-//                     (d.project as { _id?: string; id?: string }).id ||
-//                     ""
-//                   : "";
-//               return deliverableProjectId === projectId;
-//             }) || []
-//           }
+//           projects={[project]}
+//           deliverables={deliverables?.filter((d) => {
+//             const deliverableProjectId = typeof d.project === "string" ? d.project : d.project?._id || d.project?.id || "";
+//             return deliverableProjectId === projectId;
+//           }) || []}
 //           employee={employee}
-//           onAddTask={(project) => {
-//             setSelectedProjectForTask(project);
-//             setShowAddTaskModal(true);
-//           }}
+//           onAddTask={(project) => { setSelectedProjectForTask(project); setShowAddTaskModal(true); }}
 //           onAddDeliverable={() => setShowAddDeliverableModal(true)}
 //           setActiveView={setActiveView}
+//           onAddTime={handleAddTimeEntry}   // <-- ADDED: pass parent's handler so ProjectDetails calls mutation
 //         />
 //       );
 //     }
-
 //     switch (activeView) {
 //       case "dashboard":
 //         return (
 //           <DashboardView
-//             employee={employee}
-//             projects={employeeProjects}
-//             tasks={filteredTasks}
-//             timeEntries={filteredTimeEntries}
-//             setActiveView={setActiveView}
-//             onAddTime={() => {
-//               setEditTimeEntry(undefined);
-//               setShowAddTimeModal(true);
-//             }}
+//             employee={employee} projects={employeeProjects} tasks={filteredTasks}
+//             timeEntries={filteredTimeEntries} setActiveView={setActiveView}
+//             onAddTime={() => { setEditTimeEntry(undefined); setShowAddTimeModal(true); }}
 //           />
 //         );
 //       case "projects":
 //         return (
 //           <ProjectsView
-//             projects={employeeProjects}
-//             employee={employee}
-//             setActiveView={setActiveView}
-//             onAddTask={(project) => {
-//               setSelectedProjectForTask(project || null);
-//               setShowAddTaskModal(true);
-//             }}
-//             onAddDeliverable={() => {
-//               /* This button might not be needed here, 
-//                  but if it is, you need to set the activeView 
-//                  to a project first, then open the modal.
-//                  Or, adjust AddDeliverableModal to show a project dropdown
-//                  if no projectId is passed.
-//                  For now, it does nothing.
-//               */
-//             }}
+//             projects={employeeProjects} employee={employee} setActiveView={setActiveView}
+//             onAddTask={(project) => { setSelectedProjectForTask(project || null); setShowAddTaskModal(true); }}
+//             onAddDeliverable={() => { /* See original comment */ }}
 //           />
 //         );
 //       case "tasks":
 //         return (
 //           <TasksView
-//             tasks={filteredTasks}
-//             projects={employeeProjects}
-//             employee={employee}
-//             priorityFilter={priorityFilter}
-//             statusFilter={statusFilter}
-//             projectFilter={projectFilter}
-//             setPriorityFilter={setPriorityFilter}
-//             setStatusFilter={setStatusFilter}
-//             setProjectFilter={setProjectFilter}
-//             onAddTask={(project) => {
-//               setSelectedProjectForTask(project);
-//               setShowAddTaskModal(true);
-//             }}
+//             tasks={filteredTasks} projects={employeeProjects} employee={employee}
+//             priorityFilter={priorityFilter} statusFilter={statusFilter} projectFilter={projectFilter}
+//             setPriorityFilter={setPriorityFilter} setStatusFilter={setStatusFilter} setProjectFilter={setProjectFilter}
+//             onAddTask={(project) => { setSelectedProjectForTask(project); setShowAddTaskModal(true); }}
 //           />
 //         );
 //       case "timesheets":
 //         return (
 //           <TimesheetsView
-//             timeEntries={filteredTimeEntries}
-//             projects={employeeProjects}
-//             projectFilter={projectFilter}
-//             dateFrom={dateFrom}
-//             dateTo={dateTo}
-//             setProjectFilter={setProjectFilter}
-//             setDateFrom={setDateFrom}
-//             setDateTo={setDateTo}
-//             onAddTime={() => {
-//               setEditTimeEntry(undefined);
-//               setShowAddTimeModal(true);
-//             }}
-//             onEditTime={(entry) => {
-//               setEditTimeEntry(entry);
-//               setShowAddTimeModal(true);
-//             }}
+//             timeEntries={filteredTimeEntries} projects={employeeProjects} projectFilter={projectFilter}
+//             dateFrom={dateFrom} dateTo={dateTo} setProjectFilter={setProjectFilter}
+//             setDateFrom={setDateFrom} setDateTo={setDateTo}
+//             onAddTime={() => { setEditTimeEntry(undefined); setShowAddTimeModal(true); }}
+//             onEditTime={(entry) => { setEditTimeEntry(entry); setShowAddTimeModal(true); }}
 //             onDeleteTime={handleDeleteTimeEntry}
 //           />
 //         );
-//       default:
-//         return null;
+//       default: return null;
 //     }
 //   };
 
-//   // Dummy employee object for fallback
+//   // Fallback employee (no changes needed)
 //   const fallbackEmployee: User = {
-//     _id: "",
-//     name: "",
-//     role: "employee",
-//     email: "",
-//     phone: "",
-//     grade: 0,
-//     designation: "",
-//     cnic: "",
-//     projects: [],
+//     _id: "", name: "", role: "employee", email: "", phone: "", grade: 0, designation: "", cnic: "", projects: [],
 //   };
 
+//   // Main component return (JSX, no changes needed)
 //   return (
 //     <div className="min-h-screen bg-gray-100 flex">
 //       <Sidebar
-//         employee={employee || fallbackEmployee}
-//         activeView={activeView}
-//         setActiveView={setActiveView}
-//         sidebarOpen={sidebarOpen}
-//         setSidebarOpen={setSidebarOpen}
+//         employee={employee || fallbackEmployee} activeView={activeView} setActiveView={setActiveView}
+//         sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
 //       />
 //       <div className="flex-1 md:ml-64">
 //         <div className="p-6">
@@ -502,43 +632,33 @@
 //           {renderMainContent()}
 //         </div>
 //       </div>
+//       {/* Modals (no changes needed) */}
 //       {showAddTimeModal && (
 //         <AddTimeEntryModal
 //           projects={employeeProjects}
 //           employee={employee || fallbackEmployee}
+//           // The corrected onSubmit prop is passed here
 //           onSubmit={handleAddTimeEntry}
-//           onClose={() => setShowAddTimeModal(false)}
+//           onClose={() => { setShowAddTimeModal(false); setEditTimeEntry(undefined); }} // Also clear edit state on close
 //           initialData={editTimeEntry}
 //         />
 //       )}
 //       {showAddTaskModal && (
 //         <AddTaskModal
-//           projects={
-//             selectedProjectForTask
-//               ? employeeProjects.filter((p) => {
-//                   const teamLeadId =
-//                     typeof p.teamLead === "string"
-//                       ? p.teamLead
-//                       : p.teamLead?._id || p.teamLead?.id;
-//                   return teamLeadId === getEmployeeId(employee);
-//                 })
-//               : employeeProjects
-//           }
+//           projects={selectedProjectForTask ? employeeProjects.filter((p) => {
+//             const teamLeadId = typeof p.teamLead === "string" ? p.teamLead : p.teamLead?._id || p.teamLead?.id;
+//             return teamLeadId === getEmployeeId(employee);
+//           }) : employeeProjects}
 //           selectedProject={selectedProjectForTask || undefined}
 //           employee={employee || fallbackEmployee}
 //           onSubmit={handleAddTask}
-//           onClose={() => {
-//             setShowAddTaskModal(false);
-//             setSelectedProjectForTask(null);
-//           }}
-//           tasks={tasks}
+//           onClose={() => { setShowAddTaskModal(false); setSelectedProjectForTask(null); }}
+//           tasks={tasks} // Pass tasks for parent task selection if adding subtask
 //         />
 //       )}
 //       {showAddDeliverableModal && (
-//         // FIXED: Passed the correct `projectId` from state
-//         // and removed the unused `onSubmit`.
 //         <AddDeliverableModal
-//           projectId={projectId}
+//           projectId={projectId} // Use the projectId derived from activeView
 //           employee={employee || fallbackEmployee}
 //           onClose={() => setShowAddDeliverableModal(false)}
 //         />
@@ -548,8 +668,6 @@
 // };
 
 // export default EmployeeDashboard;
-// src/pages/EmployeeDashboard/EmployeDashboard.tsx
-
 import React, { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Sidebar from "../../components/EmployeeSidebar/Sidebar";
@@ -692,10 +810,25 @@ const EmployeeDashboard: React.FC = () => {
         data: formData.data,           // Use data from the received formData
       },
       {
-        onSuccess: () => {
+        onSuccess: async (res) => {
+          // close modal + reset edit state (unchanged)
           setShowAddTimeModal(false);
-          setEditTimeEntry(undefined); // Reset edit state on successful creation
-          // No need to invalidate queries here; the hook handles it.
+          setEditTimeEntry(undefined);
+
+          // FORCE REFRESH: invalidate all queries then refetch all queries
+          // This is a blunt but reliable approach when queryKey shapes vary.
+          try {
+            // mark everything stale
+            queryClient.invalidateQueries();
+            // then force a refetch for all queries (predicate returns true)
+            await queryClient.refetchQueries({
+              predicate: () => true,
+            });
+          } catch (err) {
+            console.error("Error forcing refetch after creating time entry:", err);
+            // Final fallback: try a simple invalidate again
+            try { queryClient.invalidateQueries(); } catch (e) { /* ignore */ }
+          }
         },
         onError: (error) => {
           // Error is already logged by the hook and shown via toast
@@ -781,6 +914,7 @@ const EmployeeDashboard: React.FC = () => {
           onAddTask={(project) => { setSelectedProjectForTask(project); setShowAddTaskModal(true); }}
           onAddDeliverable={() => setShowAddDeliverableModal(true)}
           setActiveView={setActiveView}
+          onAddTime={handleAddTimeEntry}   // <-- ADDED: pass parent's handler so ProjectDetails calls mutation
         />
       );
     }
