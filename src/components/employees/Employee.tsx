@@ -89,20 +89,24 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
   };
 
   // Map project IDs to names
-  const getProjectNames = (
-    projectIds: (string | { _id: string; name: string })[]
-  ) => {
-    if (!projectIds?.length) return "None";
-    return projectIds
-      .map((project) => {
-        if (typeof project === "string") {
-          const foundProject = projects.find((p) => p._id === project);
-          return foundProject ? foundProject.name : project;
-        }
-        return project.name;
-      })
-      .join(", ");
-  };
+ const getProjectNames = (
+  projectIds: (string | { _id: string; name: string })[]
+) => {
+  if (!projectIds?.length) return "None";
+  return projectIds
+    .map((project) => {
+      if (typeof project === "string") {
+        const foundProject = projects.find((p) => p._id === project);
+        // Only return the project name if found; otherwise, skip invalid strings
+        return foundProject ? foundProject.name : null;
+      }
+      // Ensure it’s a valid project object with a name
+      return project?.name || null;
+    })
+    .filter(Boolean) // remove null/undefined entries
+    .join(", ") || "None";
+};
+
 
   return (
     <div className="container  px-4 py-6 bg-background min-h-screen">
