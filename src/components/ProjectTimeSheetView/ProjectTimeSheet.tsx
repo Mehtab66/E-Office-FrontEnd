@@ -677,7 +677,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                  onClick={cancelDeleteDeliverable}
                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium" // Adjusted styles
                >
-                 Cancel
+                Cancel
                </button>
                <button
                  onClick={confirmDeleteDeliverable}
