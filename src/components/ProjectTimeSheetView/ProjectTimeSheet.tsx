@@ -660,7 +660,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
           }}
         />
       )}
-
       {/* Delete Confirmation Modal */}
       {/* ... (Delete confirmation modal code is fine) ... */}
        {deliverableToDelete && (
