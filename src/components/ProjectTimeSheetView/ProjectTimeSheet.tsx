@@ -691,5 +691,4 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     </div>
   );
 };
-
 export default ProjectTimesheetView;
