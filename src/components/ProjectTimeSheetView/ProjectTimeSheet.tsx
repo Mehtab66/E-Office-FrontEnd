@@ -511,7 +511,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                 </tbody>
              </table>
           </div>
-
           {/* Hours Summary */}
           {/* ... (Hours Summary code is mostly fine, uses user name now) ... */}
            <div className="mt-6 border-t pt-6"> {/* Added border-t pt-6 */}
