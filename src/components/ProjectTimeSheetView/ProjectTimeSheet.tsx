@@ -404,7 +404,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
            </div>
          </div>
        </div>
-
       {/* Content based on active tab */}
       {activeTab === "timesheet" && (
         <div>
