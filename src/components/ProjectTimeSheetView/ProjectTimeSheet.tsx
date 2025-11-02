@@ -539,7 +539,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         </div>
       )}
 
-
       {activeTab === "deliverables" && (
         <div>
            {/* ... Deliverables Table ... */}
