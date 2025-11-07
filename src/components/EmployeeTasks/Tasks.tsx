@@ -465,7 +465,6 @@ const TasksView: React.FC<TasksViewProps> = ({
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{typeof task.assignedTo === "object" && task.assignedTo !== null ? task.assignedTo.name : task.assignedTo || "-"}</td>
                   </tr>
-
                   {task.subtasks?.map((subtask: any) => (
                     <tr key={subtask._id || subtask.id} className="bg-gray-50/60 hover:bg-gray-100/60 text-sm">
                       <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-gray-700">↳ {subtask.title}</td>
