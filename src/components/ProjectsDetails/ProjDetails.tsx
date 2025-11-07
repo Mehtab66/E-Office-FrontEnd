@@ -20,6 +20,14 @@
 //   onAddTask: (project: Project) => void;
 //   onAddDeliverable: () => void;
 //   setActiveView: (view: string) => void;
+//   // NEW optional prop: parent handler for adding time entries (so Project view can call API)
+//   onAddTime?: (formData: {
+//     projectId: string;
+//     data: Omit<
+//       TimeEntry,
+//       "_id" | "user" | "project" | "createdAt" | "updatedAt"
+//     >;
+//   }) => void;
 // }
 
 // const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
@@ -29,6 +37,7 @@
 //   onAddTask,
 //   onAddDeliverable,
 //   setActiveView,
+//   onAddTime,
 // }) => {
 //   const [project, setProject] = useState<Project | null>(null);
 //   const [isTeamLead, setIsTeamLead] = useState(false);
@@ -97,7 +106,7 @@
 //           ? currentProject.teamLead
 //           : currentProject.teamLead?._id || currentProject.teamLead?.id;
 
-//       const employeeId = employee._id || employee.id;
+//       const employeeId = employee._id || (employee as any).id;
 //       setIsTeamLead(teamLeadId === employeeId);
 
 //       const projectId = currentProject._id || currentProject.id;
@@ -109,16 +118,34 @@
 //     }
 //   }, [projects, employee]);
 
-//   const handleTimeEntrySubmit = (data: TimeEntry) => {
-//     console.log("Time entry submitted:", data);
+//   // UPDATED: accept the { projectId, data } object the modal sends
+//   const handleTimeEntrySubmit = (formData: {
+//     projectId: string;
+//     data: Omit<
+//       TimeEntry,
+//       "_id" | "user" | "project" | "createdAt" | "updatedAt"
+//     >;
+//   }) => {
+//     console.log("Time entry submitted:", formData);
 //     setShowTimeEntryModal(false);
 
+//     // If parent passed in onAddTime (EmployeeDashboard), forward to it so the mutation/API runs
+//     if (onAddTime) {
+//       try {
+//         onAddTime(formData);
+//       } catch (err) {
+//         console.error("Error calling onAddTime:", err);
+//       }
+//       return;
+//     }
+
+//     // Fallback (keeps current UI behavior when no parent handler is provided)
 //     const newEntry = {
 //       id: dummyTimesheets.length + 1,
 //       userName: employee?.name || "Current User",
-//       date: data.date,
-//       hours: data.hours,
-//       task: data.title,
+//       date: formData.data.date,
+//       hours: formData.data.hours,
+//       task: formData.data.title,
 //       approved: false,
 //     };
 
@@ -223,9 +250,7 @@
 //               Client: {getClientName(project.client)}
 //             </p>
 //             {isTeamLead && (
-//               <p className="text-sm text-indigo-600 mt-1">
-//                 You are the Team Lead
-//               </p>
+//               <p className="text-sm text-indigo-600 mt-1">You are the Team Lead</p>
 //             )}
 //           </div>
 //           <span
@@ -482,7 +507,6 @@ interface ProjectDetailsViewProps {
   onAddTask: (project: Project) => void;
   onAddDeliverable: () => void;
   setActiveView: (view: string) => void;
-  // NEW optional prop: parent handler for adding time entries (so Project view can call API)
   onAddTime?: (formData: {
     projectId: string;
     data: Omit<
@@ -505,48 +529,10 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
   const [isTeamLead, setIsTeamLead] = useState(false);
   const [showTimeEntryModal, setShowTimeEntryModal] = useState(false);
   const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
-  const [dummyTimesheets, setDummyTimesheets] = useState([
-    {
-      id: 1,
-      userName: "John Doe",
-      date: "2023-10-15",
-      hours: 8,
-      task: "Frontend Development",
-      approved: true,
-    },
-    {
-      id: 2,
-      userName: "Jane Smith",
-      date: "2023-10-15",
-      hours: 7.5,
-      task: "Backend API Integration",
-      approved: false,
-    },
-    {
-      id: 3,
-      userName: "Mike Johnson",
-      date: "2023-10-15",
-      hours: 6,
-      task: "Database Optimization",
-      approved: true,
-    },
-    {
-      id: 4,
-      userName: "John Doe",
-      date: "2023-10-16",
-      hours: 7,
-      task: "UI/UX Design",
-      approved: false,
-    },
-    {
-      id: 5,
-      userName: "Jane Smith",
-      date: "2023-10-16",
-      hours: 8,
-      task: "Testing",
-      approved: true,
-    },
-  ]);
+
+  // dynamic timesheets (no static dummy data)
+  const [timesheets, setTimesheets] = useState<Array<any>>([]);
+  const [loadingTimesheets, setLoadingTimesheets] = useState(false);
 
   useEffect(() => {
     console.log("Projects in Details:", projects);
@@ -568,19 +554,65 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
           ? currentProject.teamLead
           : currentProject.teamLead?._id || currentProject.teamLead?.id;
 
-      const employeeId = employee._id || (employee as any).id;
+      const employeeId = (employee as any)._id || (employee as any).id;
       setIsTeamLead(teamLeadId === employeeId);
 
       const projectId = currentProject._id || currentProject.id;
       if (!projectId) {
         console.error("Project ID is undefined or missing:", currentProject);
+      } else {
+        // try sessionStorage first (prefetched by ProjectsView)
+        const key = `timesheets_${String(projectId)}`;
+        try {
+          const raw = sessionStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              setTimesheets(parsed);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to read timesheets from sessionStorage:", e);
+        }
+
+        // fallback: fetch directly
+        (async () => {
+          const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:3000";
+          const url = `${API_BASE}/api/projects/${encodeURIComponent(String(projectId))}/time-entries`;
+          const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
+          const headers: Record<string, string> = { Accept: "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+
+          setLoadingTimesheets(true);
+          try {
+            const res = await fetch(url, { headers, credentials: "include" });
+            if (!res.ok) {
+              console.debug("Fetch timesheets failed:", res.status, await res.text());
+              setTimesheets([]);
+              setLoadingTimesheets(false);
+              return;
+            }
+            const data = await res.json();
+            const entries = Array.isArray(data) ? data : data.timeEntries || [];
+            setTimesheets(entries);
+            try {
+              sessionStorage.setItem(key, JSON.stringify(entries));
+            } catch {}
+          } catch (err) {
+            console.debug("Fetch timesheets error:", err);
+            setTimesheets([]);
+          } finally {
+            setLoadingTimesheets(false);
+          }
+        })();
       }
     } else {
       console.warn("No projects available");
     }
   }, [projects, employee]);
 
-  // UPDATED: accept the { projectId, data } object the modal sends
+  // accept the { projectId, data } object the modal sends
   const handleTimeEntrySubmit = (formData: {
     projectId: string;
     data: Omit<
@@ -601,17 +633,26 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
       return;
     }
 
-    // Fallback (keeps current UI behavior when no parent handler is provided)
+    // Fallback: append to local timesheets so UI updates immediately
     const newEntry = {
-      id: dummyTimesheets.length + 1,
-      userName: employee?.name || "Current User",
+      _id: `local-${Date.now()}`,
+      user: { name: employee?.name || "You" },
+      userName: employee?.name || "You",
       date: formData.data.date,
       hours: formData.data.hours,
-      task: formData.data.title,
+      title: formData.data.title,
+      task: formData.data.task,
       approved: false,
     };
 
-    setDummyTimesheets([...dummyTimesheets, newEntry]);
+    setTimesheets((prev) => {
+      const updated = [...prev, newEntry];
+      try {
+        const pid = project?._id || project?.id;
+        if (pid) sessionStorage.setItem(`timesheets_${String(pid)}`, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   if (!project || !employee) {
@@ -654,17 +695,28 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
 
   const getMemberName = (member: any): string => {
     if (typeof member === "string") return member;
-    return member.name || "Unknown Member";
+    return member?.name || "Unknown Member";
   };
 
   const getTeamLeadName = (teamLead: any): string => {
     if (typeof teamLead === "string") return teamLead;
-    return teamLead.name || "Unknown Team Lead";
+    return teamLead?.name || "Unknown Team Lead";
   };
 
   const getClientName = (client: any): string => {
     if (typeof client === "string") return client;
-    return client.name || "Unknown Client";
+    return client?.name || "Unknown Client";
+  };
+
+  const getEntryUserName = (entry: any) => {
+    if (entry.user && typeof entry.user === "object") return entry.user.name || entry.userName || "Unknown";
+    return entry.userName || (entry.user ? String(entry.user) : "Unknown");
+  };
+
+  const getEntryTaskTitle = (entry: any) => {
+    if (entry.title) return entry.title;
+    if (entry.task && typeof entry.task === "object") return entry.task.title || entry.task.name || "Task";
+    return "N/A";
   };
 
   return (
@@ -788,6 +840,7 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         </div>
       </div>
 
+      {/* Deliverables block unchanged */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
@@ -854,17 +907,22 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
         )}
       </div>
 
+      {/* Team Timesheets */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             Team Timesheets
           </h2>
           <span className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full">
-            {dummyTimesheets.length} entries
+            {timesheets.length} entries
           </span>
         </div>
 
-        {dummyTimesheets.length === 0 ? (
+        {loadingTimesheets ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading timesheets…</p>
+          </div>
+        ) : timesheets.length === 0 ? (
           <div className="text-center py-8">
             <FiCalendar className="mx-auto text-gray-300 text-4xl mb-3" />
             <p className="text-gray-500 text-sm sm:text-base">
@@ -894,26 +952,24 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dummyTimesheets.map((entry) => (
-                  <tr key={entry.id}>
+                {timesheets.map((entry: any, idx: number) => (
+                  <tr key={entry._id || entry.id || `local-${idx}`}>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {entry.userName}
+                      {getEntryUserName(entry)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(entry.date).toLocaleDateString()}
+                      {entry.date ? new Date(entry.date).toLocaleDateString() : "N/A"}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entry.hours} hours
+                      {entry.hours != null ? `${entry.hours} hours` : "N/A"}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500">
-                      {entry.task}
+                      {getEntryTaskTitle(entry)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          entry.approved
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                          entry.approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
                         {entry.approved ? "Approved" : "Pending"}
