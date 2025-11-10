@@ -502,6 +502,8 @@ const ProjectDetailsView: React.FC<ProjectDetailsViewProps> = ({
           employee={employee}
           onSubmit={handleTimeEntrySubmit}
           onClose={() => setShowTimeEntryModal(false)}
+           initialProjectId={String(projectId)}
+    initialProject={project}
         />
       )}
 
