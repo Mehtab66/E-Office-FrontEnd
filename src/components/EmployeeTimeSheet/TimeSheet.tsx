@@ -117,6 +117,16 @@
 //   // refs to manage timeouts
 //   const maxTimeoutRef = useRef<number | null>(null);
 
+//   // track entry IDs we optimistically deleted (so incoming props won't re-add them)
+//   const pendingDeletesRef = useRef<Set<string>>(new Set());
+
+//   const markPendingDelete = (id: string) => {
+//     pendingDeletesRef.current.add(id);
+//   };
+//   const unmarkPendingDelete = (id: string) => {
+//     pendingDeletesRef.current.delete(id);
+//   };
+
 //   // Called when user changes a filter control
 //   const startFiltering = () => {
 //     // show spinner
@@ -135,24 +145,27 @@
 
 //   // When parent provides new timeEntries, update displayedEntries and stop spinner.
 //   useEffect(() => {
-//     // Always update displayedEntries when new data arrives (even if empty) —
-//     // but prefer to not update if we're filtering and incoming array is empty and previous entries exist.
-//     // That avoids the blink while fetch is in-progress and server returns an empty placeholder.
-//     const incomingEmpty = !timeEntries || timeEntries.length === 0;
+//     const incomingArray = Array.isArray(timeEntries) ? timeEntries : [];
+//     const incomingEmpty = incomingArray.length === 0;
 //     const havePrevious = displayedEntries && displayedEntries.length > 0;
+
+//     // Filter out any entries that are currently pending deletion
+//     const filteredIncoming = incomingArray.filter((e) => {
+//       const id = (e as any)._id || (e as any).id;
+//       return !pendingDeletesRef.current.has(String(id));
+//     });
 
 //     if (incomingEmpty && isFiltering && havePrevious) {
 //       // keep previous entries visible until a non-empty result or until filtering stops
-//       // do not overwrite displayedEntries here
 //     } else {
-//       // update displayed entries to whatever arrived (including empty results)
-//       setDisplayedEntries(timeEntries);
+//       // update displayed entries to whatever arrived (filtered)
+//       setDisplayedEntries(filteredIncoming);
 //     }
 
 //     // persist non-empty displayed entries so we can restore after unmount/remount
 //     try {
-//       if (timeEntries && timeEntries.length > 0) {
-//         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(timeEntries));
+//       if (filteredIncoming && filteredIncoming.length > 0) {
+//         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filteredIncoming));
 //       }
 //     } catch {
 //       // ignore storage errors
@@ -163,6 +176,18 @@
 //       setIsFiltering(false);
 //     }
 
+//     // If a pending-delete has been removed from the server result, clear it from the set
+//     if (incomingArray && incomingArray.length > 0) {
+//       const incomingIds = new Set(
+//         incomingArray.map((e) => String((e as any)._id || (e as any).id))
+//       );
+//       Array.from(pendingDeletesRef.current).forEach((pendingId) => {
+//         if (!incomingIds.has(pendingId)) {
+//           unmarkPendingDelete(pendingId);
+//         }
+//       });
+//     }
+
 //     // clear the safety timeout
 //     if (maxTimeoutRef.current) {
 //       window.clearTimeout(maxTimeoutRef.current);
@@ -170,6 +195,20 @@
 //     }
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, [timeEntries]);
+
+//   // persist displayedEntries to sessionStorage whenever it changes
+//   useEffect(() => {
+//     try {
+//       if (displayedEntries && displayedEntries.length > 0) {
+//         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(displayedEntries));
+//       } else {
+//         // keep storage when empty to avoid clobbering other logic; optional:
+//         // sessionStorage.removeItem(STORAGE_KEY);
+//       }
+//     } catch {
+//       // ignore
+//     }
+//   }, [displayedEntries]);
 
 //   // Clean up on unmount
 //   useEffect(() => {
@@ -376,36 +415,51 @@
 //                         <FiEdit />
 //                       </button>
 //                       <button
-//   onClick={() => {
-//     if (!projectId || !entryId) {
-//       console.error("Missing project or entry ID for delete");
-//       return;
-//     }
+//                         onClick={() => {
+//                           if (!projectId || !entryId) {
+//                             console.error("Missing project or entry ID for delete");
+//                             return;
+//                           }
 
-//     // optimistic removal from UI
-//     const prev = displayedEntries;
-//     setDisplayedEntries(prev.filter((e) => (e._id || e.id) !== entryId));
+//                           // optimistic removal from UI
+//                           const prev = displayedEntries;
+//                           setDisplayedEntries(prev.filter((e) => (e._id || e.id) !== entryId));
 
-//     // call parent delete handler; if it returns a promise, rollback on error
-//     try {
-//       const result = onDeleteTime(projectId, entryId);
-//       if (result && typeof (result as Promise<any>).then === "function") {
-//         (result as Promise<any>).catch((err) => {
-//           console.error("Delete failed, rolling back UI:", err);
-//           setDisplayedEntries(prev);
-//         });
-//       }
-//     } catch (err) {
-//       console.error("Delete handler threw, rolling back UI:", err);
-//       setDisplayedEntries(prev);
-//     }
-//   }}
-//   className="text-red-600 hover:text-red-800"
-//   disabled={!projectId || !entryId}
-// >
-//   <FiTrash2 />
-// </button>
+//                           // mark pending so incoming props don't re-add it
+//                           markPendingDelete(String(entryId));
 
+//                           // call parent delete handler; if it returns a promise, rollback on error
+//                           try {
+//                             const result: any = (onDeleteTime as any)(projectId, entryId);
+//                             if (result && typeof result.then === "function") {
+//                               result
+//                                 .then(() => {
+//                                   // successful: ensure pending id will be cleared by incoming props effect
+//                                   // but clear as a safety
+//                                   unmarkPendingDelete(String(entryId));
+//                                 })
+//                                 .catch((err: any) => {
+//                                   console.error("Delete failed, rolling back UI:", err);
+//                                   setDisplayedEntries(prev);
+//                                   unmarkPendingDelete(String(entryId));
+//                                 });
+//                             } else {
+//                               // Parent didn't return a promise — we'll unmark after a short timeout to avoid indefinite pending state
+//                               window.setTimeout(() => {
+//                                 unmarkPendingDelete(String(entryId));
+//                               }, 5000);
+//                             }
+//                           } catch (err) {
+//                             console.error("Delete handler threw, rolling back UI:", err);
+//                             setDisplayedEntries(prev);
+//                             unmarkPendingDelete(String(entryId));
+//                           }
+//                         }}
+//                         className="text-red-600 hover:text-red-800"
+//                         disabled={!projectId || !entryId}
+//                       >
+//                         <FiTrash2 />
+//                       </button>
 //                     </td>
 //                   </tr>
 //                 );
@@ -459,12 +513,19 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
   onEditTime,
   onDeleteTime,
 }) => {
+  // DEBUG: log on every render
+  console.debug("[TimesheetsView] render", {
+    timeEntriesLength: Array.isArray(timeEntries) ? timeEntries.length : timeEntries,
+    projectFilter,
+    dateFrom,
+    dateTo,
+  });
+
   const totalHours = timeEntries.reduce(
     (total, entry) => total + (entry.hours || 0), // Safer sum
     0
   );
 
-  // Helper: format a Date to YYYY-MM-DD for date input constraints
   const formatDate = (d: Date) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -474,77 +535,48 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
 
   const todayStr = formatDate(new Date());
 
-  // Enforce the rules:
-  // - No future dates: max = today for both inputs.
-  // - "To" cannot be before selected "From": min = dateFrom for To.
-  // - If user selects today's date in From, set To to today and lock both to today (min=max=today).
-  // - If From is changed such that To < From, auto-set To = From.
   useEffect(() => {
     if (!dateFrom) return;
 
-    // If from is in the future (shouldn't be possible because inputs have max),
-    // clamp it to today and set To to today.
     if (dateFrom > todayStr) {
       setDateFrom(todayStr);
       setDateTo(todayStr);
       return;
     }
 
-    // If from is today -> force to = today and lock to = today
     if (dateFrom === todayStr) {
       if (dateTo !== todayStr) setDateTo(todayStr);
       return;
     }
 
-    // If a from is selected and to exists but is before from, bump to to = from
     if (dateTo && dateTo < dateFrom) {
       setDateTo(dateFrom);
     }
 
-    // Also ensure to is not in the future
     if (dateTo && dateTo > todayStr) {
       setDateTo(todayStr);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom]);
 
-  // Ensure dateTo doesn't exceed today (in case it was set externally)
   useEffect(() => {
     if (!dateTo) return;
     if (dateTo > todayStr) {
       setDateTo(todayStr);
     }
-    // If somehow dateTo < dateFrom, adjust it (defensive)
     if (dateFrom && dateTo < dateFrom) {
       setDateTo(dateFrom);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateTo, dateFrom]);
 
-  // === NEW: local filtering control to avoid blink ===
-  // displayedEntries: what we actually render in the table.
-  const [displayedEntries, setDisplayedEntries] = useState<TimeEntry[]>(() => {
-    // Initialize: prefer actual timeEntries if present, otherwise try to restore from sessionStorage
-    try {
-      if (timeEntries && timeEntries.length > 0) return timeEntries;
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // ignore parse errors
-    }
-    return timeEntries;
-  });
+  const [displayedEntries, setDisplayedEntries] = useState<TimeEntry[]>(
+    () => (Array.isArray(timeEntries) ? timeEntries : [])
+  );
 
-  // isFiltering: overlay spinner state. We set it when user changes filters.
   const [isFiltering, setIsFiltering] = useState(false);
 
-  // refs to manage timeouts
   const maxTimeoutRef = useRef<number | null>(null);
-
-  // track entry IDs we optimistically deleted (so incoming props won't re-add them)
   const pendingDeletesRef = useRef<Set<string>>(new Set());
 
   const markPendingDelete = (id: string) => {
@@ -554,56 +586,45 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
     pendingDeletesRef.current.delete(id);
   };
 
-  // Called when user changes a filter control
   const startFiltering = () => {
-    // show spinner
     setIsFiltering(true);
-    // clear existing max timeout
     if (maxTimeoutRef.current) {
       window.clearTimeout(maxTimeoutRef.current);
       maxTimeoutRef.current = null;
     }
-    // safety: hide spinner automatically after 10s if nothing happens
     maxTimeoutRef.current = window.setTimeout(() => {
       setIsFiltering(false);
       maxTimeoutRef.current = null;
     }, 10000);
   };
 
-  // When parent provides new timeEntries, update displayedEntries and stop spinner.
+  // DEBUG: show detailed effect activity and incoming payload
   useEffect(() => {
-    const incomingArray = Array.isArray(timeEntries) ? timeEntries : [];
-    const incomingEmpty = incomingArray.length === 0;
-    const havePrevious = displayedEntries && displayedEntries.length > 0;
+    console.debug("[TimesheetsView] timeEntries effect start", {
+      incomingLength: Array.isArray(timeEntries) ? timeEntries.length : timeEntries,
+      pendingDeletes: Array.from(pendingDeletesRef.current),
+      displayedBefore: displayedEntries.length,
+      isFiltering,
+    });
 
-    // Filter out any entries that are currently pending deletion
+    const incomingArray = Array.isArray(timeEntries) ? timeEntries : [];
     const filteredIncoming = incomingArray.filter((e) => {
       const id = (e as any)._id || (e as any).id;
       return !pendingDeletesRef.current.has(String(id));
     });
 
-    if (incomingEmpty && isFiltering && havePrevious) {
-      // keep previous entries visible until a non-empty result or until filtering stops
-    } else {
-      // update displayed entries to whatever arrived (filtered)
-      setDisplayedEntries(filteredIncoming);
-    }
+    setDisplayedEntries(filteredIncoming);
 
-    // persist non-empty displayed entries so we can restore after unmount/remount
     try {
       if (filteredIncoming && filteredIncoming.length > 0) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filteredIncoming));
       }
-    } catch {
-      // ignore storage errors
-    }
+    } catch {}
 
-    // new data arrived -> stop spinner
     if (isFiltering) {
       setIsFiltering(false);
     }
 
-    // If a pending-delete has been removed from the server result, clear it from the set
     if (incomingArray && incomingArray.length > 0) {
       const incomingIds = new Set(
         incomingArray.map((e) => String((e as any)._id || (e as any).id))
@@ -615,29 +636,25 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
       });
     }
 
-    // clear the safety timeout
     if (maxTimeoutRef.current) {
       window.clearTimeout(maxTimeoutRef.current);
       maxTimeoutRef.current = null;
     }
+
+    console.debug("[TimesheetsView] timeEntries effect end", {
+      displayedAfter: filteredIncoming.length,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeEntries]);
 
-  // persist displayedEntries to sessionStorage whenever it changes
   useEffect(() => {
     try {
       if (displayedEntries && displayedEntries.length > 0) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(displayedEntries));
-      } else {
-        // keep storage when empty to avoid clobbering other logic; optional:
-        // sessionStorage.removeItem(STORAGE_KEY);
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [displayedEntries]);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (maxTimeoutRef.current) {
@@ -645,9 +662,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
       }
     };
   }, []);
-  // === end new ===
 
-  // Clear filters handler
   const handleClearFilters = () => {
     startFiltering();
     setProjectFilter("");
@@ -669,23 +684,12 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
           >
             <FiPlus className="mr-2" /> Add Entry
           </button>
-
-          {/* Clear filters button (kept in header as before) */}
-          {/* <button
-            onClick={handleClearFilters}
-            className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all flex items-center"
-          >
-            Clear filters
-          </button> */}
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-        {/* Activity indicator overlay (only over this container) */}
         {isFiltering && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border-4 border-dashed animate-spin">
-              {/* spinner via border + animate-spin */}
-            </div>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border-4 border-dashed animate-spin" />
           </div>
         )}
 
@@ -702,11 +706,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
             >
               <option value="">All Projects</option>
               {projects.map((project) => (
-                // --- FIX: Use _id or id for key and value ---
-                <option
-                  key={project._id || project.id}
-                  value={project._id || project.id}
-                >
+                <option key={project._id || project.id} value={project._id || project.id}>
                   {project.name}
                 </option>
               ))}
@@ -717,12 +717,10 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
             <input
               type="date"
               value={dateFrom}
-              // Prevent selecting future dates by setting max to today
               max={todayStr}
               onChange={(e) => {
                 startFiltering();
                 setDateFrom(e.target.value);
-                // If user picks today's date, we'll auto-set To via effect
                 if (e.target.value === todayStr) {
                   setDateTo(todayStr);
                 }
@@ -735,19 +733,16 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
             <input
               type="date"
               value={dateTo}
-              // Min is the selected from date (if any); Max is today to prevent future dates
               min={dateFrom || undefined}
               max={todayStr}
               onChange={(e) => {
                 startFiltering();
-                // Respect min/max enforced by attrs; just set value
                 setDateTo(e.target.value);
               }}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
-          {/* NEW: Clear filters button placed at right side of the filters */}
           <div className="ml-auto">
             <button
               onClick={handleClearFilters}
@@ -786,36 +781,24 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {displayedEntries.map((entry) => {
-                // --- FIX: Get the project ID safely ---
                 const projectId =
                   typeof entry.project === "object"
                     ? entry.project?._id || entry.project?.id
                     : entry.project;
 
-                // --- FIX: Find project name safely ---
                 const projectName =
                   projects.find((p) => (p._id || p.id) === projectId)?.name ||
                   "Project Not Found";
 
-                // --- FIX: Use _id or id for the key ---
                 const entryId = entry._id || entry.id;
 
                 return (
-                  // --- FIX: Use the safe entryId for the key ---
                   <tr key={entryId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">{projectName}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {/* --- FIX: Display the safe projectName --- */}
-                      {projectName}
+                      {entry.date ? new Date(entry.date).toLocaleDateString() : "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {/* --- FIX: Format date safely --- */}
-                      {entry.date
-                        ? new Date(entry.date).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {entry.title || "N/A"}
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{entry.title || "N/A"}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {entry.hours != null ? `${entry.hours}h` : "N/A"}
                     </td>
@@ -825,9 +808,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-3 py-1 text-xs font-medium rounded-full ${
-                          entry.approved
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                          entry.approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
                         {entry.approved ? "Approved" : "Pending"}
@@ -837,7 +818,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
                       <button
                         onClick={() => onEditTime(entry)}
                         className="text-indigo-600 hover:text-indigo-800"
-                        disabled={!entryId} // Disable if no ID
+                        disabled={!entryId}
                       >
                         <FiEdit />
                       </button>
@@ -848,22 +829,19 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
                             return;
                           }
 
-                          // optimistic removal from UI
+                          console.debug("[TimesheetsView] delete click", { projectId, entryId });
+
                           const prev = displayedEntries;
                           setDisplayedEntries(prev.filter((e) => (e._id || e.id) !== entryId));
-
-                          // mark pending so incoming props don't re-add it
                           markPendingDelete(String(entryId));
 
-                          // call parent delete handler; if it returns a promise, rollback on error
                           try {
                             const result: any = (onDeleteTime as any)(projectId, entryId);
                             if (result && typeof result.then === "function") {
                               result
                                 .then(() => {
-                                  // successful: ensure pending id will be cleared by incoming props effect
-                                  // but clear as a safety
                                   unmarkPendingDelete(String(entryId));
+                                  console.debug("[TimesheetsView] delete succeeded", { entryId });
                                 })
                                 .catch((err: any) => {
                                   console.error("Delete failed, rolling back UI:", err);
@@ -871,7 +849,6 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
                                   unmarkPendingDelete(String(entryId));
                                 });
                             } else {
-                              // Parent didn't return a promise — we'll unmark after a short timeout to avoid indefinite pending state
                               window.setTimeout(() => {
                                 unmarkPendingDelete(String(entryId));
                               }, 5000);
@@ -895,14 +872,11 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
           </table>
         </div>
         <div className="p-5 border-t border-gray-100">
-          <p className="text-sm font-medium text-gray-900">
-            Total Hours: {totalHours.toFixed(1)}h
-          </p>
+          <p className="text-sm font-medium text-gray-900">Total Hours: {totalHours.toFixed(1)}h</p>
         </div>
       </div>
     </div>
   );
 };
 
-// Wrap in React.memo to avoid unnecessary re-mounts/re-renders from parent
-export default React.memo(TimesheetsView);
+export default TimesheetsView;
