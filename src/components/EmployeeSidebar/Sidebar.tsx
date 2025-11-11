@@ -148,7 +148,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer section */}
         <div className="p-4 border-t border-gray-200/50">
-          <button className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-gray-600/90 hover:bg-gray-100/50 transition-colors mb-2">
+          <button 
+            onClick={() => {
+              setActiveView("profile");
+              setSidebarOpen(false);
+            }}
+            className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors mb-2 ${
+              activeView === "profile"
+                ? "bg-gray-900/5 text-gray-900"
+                : "text-gray-600/90 hover:bg-gray-100/50"
+            }`}
+          >
             <FiUser className="mr-3 text-lg text-gray-500" />
             <span className="flex-1 text-left">Profile</span>
           </button>

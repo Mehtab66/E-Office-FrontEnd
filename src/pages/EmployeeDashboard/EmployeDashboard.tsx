@@ -9,6 +9,7 @@ import ProjectDetailsView from "../../components/ProjectsDetails/ProjDetails";
 import AddTimeEntryModal from "../../components/AddTimeEntryModal/TimeEntry";
 import AddTaskModal from "../../components/AddTask/AddTask";
 import AddDeliverableModal from "../../components/AddDeliverbles/AddDeliveryModal";
+import EmployeeProfile from "../../components/EmployeeProfile/EmployeeProfile";
 import { useCurrentUser } from "../../apis/authService";
 import { useGetProjects } from "../../hooks/useProject";
 import { useGetAllTasks } from "../../hooks/useTask";
@@ -285,6 +286,8 @@ const EmployeeDashboard: React.FC = () => {
             onDeleteTime={handleDeleteTimeEntry}
           />
         );
+      case "profile":
+        return <EmployeeProfile />;
       default: return null;
     }
   };
