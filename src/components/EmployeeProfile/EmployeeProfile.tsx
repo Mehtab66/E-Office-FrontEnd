@@ -193,10 +193,10 @@ export default function EmployeeProfile() {
             
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
             <Textarea id="bio" value={displayProfile.bio} readOnly placeholder="No bio available" className="min-h-[100px] bg-muted/50 cursor-not-allowed" />
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>

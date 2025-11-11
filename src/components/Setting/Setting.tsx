@@ -642,10 +642,10 @@ export default function Settings() {
                 
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea id="bio" value={displayProfile.bio} onChange={(e) => setProfile((p:any) => ({ ...(p || displayProfile), bio: e.target.value }))} placeholder="Tell us about yourself..." className="min-h-[100px]" />
-              </div>
+              </div> */}
 
               {saveError && (
                 <div className="text-red-500 text-sm">{saveError}</div>
@@ -653,11 +653,11 @@ export default function Settings() {
               {saveSuccess && (
                 <div className="text-green-500 text-sm">Profile updated successfully!</div>
               )}
-              <div className="flex justify-end">
+              {/* <div className="flex justify-end">
                 <Button onClick={handleSaveProfile} disabled={isSaving || isLoading}>
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
         </TabsContent>
