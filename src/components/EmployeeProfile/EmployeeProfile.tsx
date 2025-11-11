@@ -190,13 +190,7 @@ export default function EmployeeProfile() {
                 <Input id="department" value={displayProfile.department} readOnly className="pl-10 bg-muted/50 cursor-not-allowed" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input id="location" value={displayProfile.location} readOnly className="pl-10 bg-muted/50 cursor-not-allowed" />
-              </div>
-            </div>
+            
           </div>
 
           <div className="space-y-2">

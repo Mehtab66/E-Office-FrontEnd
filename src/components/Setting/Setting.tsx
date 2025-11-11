@@ -639,13 +639,7 @@ export default function Settings() {
                     <Input id="department" value={displayProfile.department} onChange={(e) => setProfile((p:any) => ({ ...(p || displayProfile), department: e.target.value }))} className="pl-10" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input id="location" value={displayProfile.location} onChange={(e) => setProfile((p:any) => ({ ...(p || displayProfile), location: e.target.value }))} className="pl-10" />
-                  </div>
-                </div>
+                
               </div>
 
               <div className="space-y-2">
