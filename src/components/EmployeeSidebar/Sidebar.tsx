@@ -13,6 +13,7 @@ import {
 import type { Employee } from "../../apis/authService";
 import "../../index.css";
 import "../../App.css";
+import { useAuthLogout } from "../../hooks/useAuth";
 
 interface SidebarProps {
   employee: Employee;
@@ -30,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   setSidebarOpen,
 }) => {
   const [isHovering, setIsHovering] = useState<string | null>(null);
+  const { mutate: logout } = useAuthLogout();
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
@@ -162,7 +164,10 @@ const Sidebar: React.FC<SidebarProps> = ({
             <FiUser className="mr-3 text-lg text-gray-500" />
             <span className="flex-1 text-left">Profile</span>
           </button>
-          <button className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-gray-600/90 hover:bg-gray-100/50 transition-colors">
+          <button
+            onClick={() => logout()}
+            className="w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium text-gray-600/90 hover:bg-gray-100/50 transition-colors"
+          >
             <FiLogOut className="mr-3 text-lg text-gray-500" />
             <span className="flex-1 text-left">Logout</span>
           </button>

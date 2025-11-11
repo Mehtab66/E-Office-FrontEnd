@@ -16,6 +16,7 @@ import {
   AvatarImage,
 } from "../../components/ui/avatar";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuthLogout } from "../../hooks/useAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,7 @@ import { useEmployees, useDashboardStats } from "../../hooks/useEmployee"; // Im
 function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { mutate: logout } = useAuthLogout();
 
   // Fetch dashboard stats
   const {
@@ -57,7 +59,7 @@ function AdminDashboard() {
   });
 
   const handleLogout = () => {
-    console.log("Logging out...");
+    logout();
   };
 
   const navigationItems = [
