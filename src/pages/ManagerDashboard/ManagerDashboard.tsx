@@ -17,11 +17,12 @@
 // import AddEntityModal from "../../components/AddEntity/AddEntityModal";
 // import AddTaskModal from "../../components/AddTask/AddTask";
 // import ProjectTimesheetView from "../../components/ProjectTimeSheetView/ProjectTimeSheet";
+// import TimesheetsView from "../../components/EmployeeTimeSheet/TimeSheet";
 // import ProjectsView from "../../components/Projects/Projects";
 // import ClientsView from "../../components/clients/Clients";
 // import EmployeesView from "../../components/employees/Employee";
 // import Settings from "../../components/Setting/Setting";
-// // --- 1. IMPORT useUpdateClient ---
+
 // import {
 //   useGetClients,
 //   useAddClient,
@@ -50,7 +51,9 @@
 // import { useAuthStore } from "../../store/authStore";
 // import { useNavigate } from "react-router-dom";
 
-// // --- FormField interface to match AddEntityModal ---
+// import { useGetAllTimeEntries } from "../../hooks/useTimeEntry";
+// import { useGetDeliverables } from "../../hooks/useDeliverable";
+
 // interface FormField {
 //   name: string;
 //   label: string;
@@ -64,7 +67,7 @@
 // interface EntityConfig {
 //   type: "client" | "project" | "employee" | "deliverable";
 //   title: string;
-//   fields: FormField[]; // Use the defined FormField interface
+//   fields: FormField[];
 //   onSubmit: (data: any) => void;
 //   initialData?: any;
 // }
@@ -83,7 +86,6 @@
 //   const navigate = useNavigate();
 //   const { mutate: logout } = useAuthLogout();
 
-//   // Fetch data
 //   const { data: clientsData = [], isLoading: clientsLoading } = useGetClients();
 //   const { data: projectsData, isLoading: projectsLoading } = useGetProjects();
 //   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
@@ -99,7 +101,6 @@
 //   const { mutate: updateProject } = useUpdateProject();
 //   const { mutate: createUser } = useCreateUser();
 //   const { mutate: updateUser } = useUpdateUser();
-//   // --- 2. INITIALIZE useUpdateClient ---
 //   const { mutate: updateClient } = useUpdateClient();
 //   const { mutate: createTask } = useCreateTask();
 //   const { mutate: updateTask } = useUpdateTask();
@@ -125,7 +126,6 @@
 //     console.log("Projects data:", projectsData);
 //   }, [projectsData]);
 
-//   // Debug log for tasks
 //   useEffect(() => {
 //     console.log("Tasks data for project:", {
 //       projectId: selectedProjectId,
@@ -134,16 +134,44 @@
 //     });
 //   }, [selectedProjectId, tasksData]);
 
-//   // Navigation items
+//   const timesheetProjectId = activeView.startsWith("timesheet-")
+//     ? activeView.split("timesheet-")[1]
+//     : "";
+
+//   const {
+//     data: managerTimeEntriesData,
+//     isLoading: managerTimeEntriesLoading,
+//     error: managerTimeEntriesError,
+//   } = useGetAllTimeEntries({
+//     projectId: timesheetProjectId || undefined,
+//   });
+
+//   const {
+//     data: managerDeliverablesData,
+//     isLoading: managerDeliverablesLoading,
+//     error: managerDeliverablesError,
+//   } = useGetDeliverables(timesheetProjectId, { enabled: !!timesheetProjectId });
+
+//   useEffect(() => {
+//     if (managerTimeEntriesError) {
+//       console.error("Manager useGetAllTimeEntries error:", managerTimeEntriesError);
+//     }
+//   }, [managerTimeEntriesError]);
+
+//   useEffect(() => {
+//     if (managerDeliverablesError) {
+//       console.error("Manager useGetDeliverables error:", managerDeliverablesError);
+//     }
+//   }, [managerDeliverablesError]);
+
 //   const navItems = [
 //     { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
 //     { id: "projects", label: "Projects", icon: <FiBriefcase /> },
 //     { id: "clients", label: "Clients", icon: <FiUsers /> },
 //     { id: "employees", label: "Employees", icon: <FiUser /> },
-//     { id: "settings", label: "Settings", icon: <FiSettings /> },
+//     { id: "settings", label: "Profile", icon: <FiSettings /> },
 //   ];
 
-//   // Modal configs
 //   const projectConfig: EntityConfig = {
 //     type: "project",
 //     title: "Project",
@@ -385,7 +413,6 @@
 //     },
 //   };
 
-//   // Open add/edit modal
 //   const openAddModal = (
 //     type: "project" | "client" | "employee",
 //     initialData?: any
@@ -418,7 +445,6 @@
 //               }
 //             );
 //           } else {
-//             // Use the default onSubmit from projectConfig
 //             projectConfig.onSubmit(data);
 //           }
 //         },
@@ -429,9 +455,7 @@
 //         title: initialData && initialData._id ? "Edit Client" : "Add Client",
 //         initialData,
 //         onSubmit: (data: any) => {
-//           // --- 3. IMPLEMENTED THE UPDATE LOGIC ---
 //           if (initialData && initialData._id) {
-//             // Preserve the projects array from initialData
 //             updateClient(
 //               {
 //                 id: initialData._id,
@@ -451,18 +475,15 @@
 //               }
 //             );
 //           } else {
-//             // Use the default onSubmit from clientConfig for creating
 //             clientConfig.onSubmit(data);
 //           }
 //         },
 //       };
 //     } else {
-//       // 'employee'
 //       config = {
 //         ...employeeConfig,
 //         title: initialData && initialData._id ? "Edit Employee" : "Add Employee",
 //         initialData,
-//         // When editing, remove the password field (it shouldn't be required)
 //         fields:
 //           initialData && initialData._id
 //             ? employeeConfig.fields
@@ -490,7 +511,6 @@
 //               }
 //             );
 //           } else {
-//             // Use the default onSubmit from employeeConfig
 //             employeeConfig.onSubmit(data);
 //           }
 //         },
@@ -502,7 +522,6 @@
 //     setErrorMessage(null);
 //   };
 
-//   // Handle edit
 //   const handleEditProject = (id: string, data: Partial<Project>) => {
 //     openAddModal("project", {
 //       _id: id,
@@ -515,7 +534,6 @@
 //     openAddModal("client", client);
 //   };
 
-//   // Handle add task
 //   const handleAddTask = (data: {
 //     title: string;
 //     description?: string;
@@ -532,7 +550,7 @@
 //         title: data.title,
 //         status: data.status,
 //         priority: data.priority,
-//         assignees: data.assignedTo ? [data.assignedTo] : [], // Subtasks use 'assignees' array
+//         assignees: data.assignedTo ? [data.assignedTo] : [],
 //       };
 //       createSubtask(
 //         {
@@ -585,7 +603,6 @@
 //     }
 //   };
 
-//   // Handle edit task
 //   const handleEditTask = (data: {
 //     title: string;
 //     description?: string;
@@ -625,10 +642,8 @@
 //     );
 //   };
 
-//   // Open task editing modal
 //   const openEditTaskModal = (task: Task) => {
 //     setEditingTask(task);
-//     // Set the project for fetching tasks
 //     const taskProject = projects.find(
 //       (p) =>
 //         p._id === (typeof task.project === "string" ? task.project : task.project._id)
@@ -639,19 +654,16 @@
 //     setShowAddTaskModal(true);
 //   };
 
-//   // Handle logout
 //   const handleLogout = () => {
 //     logout();
 //   };
 
-//   // Handler to open Add Task modal from Dashboard
 //   const openAddTaskFromDashboard = () => {
 //     setSelectedProjectForTask(null);
-//     setEditingTask(null); // Ensure not in edit mode
+//     setEditingTask(null);
 //     setShowAddTaskModal(true);
 //   };
 
-//   // Render main content
 //   const renderMainContent = () => {
 //     if (clientsLoading || projectsLoading || employeesLoading || statsLoading) {
 //       return <div className="p-6">Loading...</div>;
@@ -675,10 +687,20 @@
 //           </div>
 //         );
 //       }
+
+//       const hookTimeEntries = managerTimeEntriesData?.timeEntries || managerTimeEntriesData || [];
+//       const hookDeliverables = managerDeliverablesData?.deliverables || managerDeliverablesData || [];
+
+//       if (managerTimeEntriesLoading || managerDeliverablesLoading) {
+//         return <div className="p-6">Loading timesheets & deliverables...</div>;
+//       }
+
 //       return (
 //         <ProjectTimesheetView
 //           project={{ _id: project._id, name: project.name }}
-//           timeEntries={[]}
+//           timeEntries={(hookTimeEntries as TimeEntry[]) || []}
+//           projects={projects}
+//           deliverables={hookDeliverables || []}
 //           onAddDeliverable={(deliverable) =>
 //             console.log("Add deliverable:", deliverable)
 //           }
@@ -714,7 +736,7 @@
 //             onPageChange={(page) => console.log("Page:", page)}
 //             onAddTask={(project) => {
 //               setSelectedProjectForTask(project || null);
-//               setEditingTask(null); // Ensure not in edit mode
+//               setEditingTask(null);
 //               setShowAddTaskModal(true);
 //             }}
 //             onEditTask={openEditTaskModal}
@@ -766,6 +788,7 @@
 //         </div>
 //       )}
 //       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+
 //         <div className="sidebar-header">
 //           <div className="logo">
 //             <FiBriefcase className="logo-icon" />
@@ -778,53 +801,78 @@
 //             <FiX />
 //           </button>
 //         </div>
+
+//         {/* NOTE: moved profile avatar + name + designation to the bottom (sidebar-footer).
+//             Top profile block intentionally removed per your request. */}
+
+//         {/* Main nav (exclude the 'settings' / Profile item here so we can render it at bottom) */}
 //         <nav className="sidebar-nav">
-//           {navItems.map((item) => (
-//             <button
-//               key={item.id}
-//               className={`nav-item ${activeView === item.id ? "active" : ""}`}
-//               onClick={() => setActiveView(item.id)}
-//             >
-//               {item.icon}
-//               <span>{item.label}</span>
-//             </button>
-//           ))}
+//           {navItems
+//             .filter((item) => item.id !== "settings")
+//             .map((item) => (
+//               <button
+//                 key={item.id}
+//                 className={`nav-item ${activeView === item.id ? "active" : ""}`}
+//                 onClick={() => setActiveView(item.id)}
+//               >
+//                 {item.icon}
+//                 <span>{item.label}</span>
+//               </button>
+//             ))}
 //         </nav>
+
+//         {/* Footer area: moved profile (avatar + name + designation) above logout at the very bottom */}
+//         <div className="sidebar-footer px-4 py-4 mt-auto">
+//           {/* Profile area now shows avatar + name + designation and opens profile on click */}
+//           <button
+//   className={`nav-item w-full justify-start profile-footer`}
+//   onClick={() => setActiveView("settings")}
+// >
+//   <div className="sidebar-profile-footer flex items-center gap-3">
+//     <div className="avatar">{user?.name?.charAt(0) || "U"}</div>
+//     <div className="sidebar-user-info text-left">
+//       <div className="user-name">{user?.name || "User"}</div>
+//       <div className="user-role">
+//         {user?.role ? user.role.replace("_", " ").toUpperCase() : ""}
 //       </div>
-//       <div className="main-content">
-//         <div className="top-nav">
-//           <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-//             <FiMenu />
-//           </button>
-//           <div className="search-box">
-//             <FiSearch className="search-icon" />
-//             <input type="text" placeholder="Search..." />
+//     </div>
+//   </div>
+// </button>
+
+
+//           {/* Logout at very bottom */}
+//           <div className="mt-4">
+//             <button
+//               onClick={handleLogout}
+//               className="w-full px-4 py-2 bg-white text-gray-800 rounded-lg flex items-center justify-center gap-2 shadow-sm"
+//             >
+//               <FiLogOut />
+//               Logout
+//             </button>
 //           </div>
-//           <div className="user-menu">
+//         </div>
+//       </div>
+
+//       <div className="main-content">
+//         <div className="top-nav flex items-center justify-between">
+//           <div className="left-controls flex items-center">
+//             <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
+//               <FiMenu />
+//             </button>
+//           </div>
+
+//           {/* right side: place bell icon on the right of the navbar */}
+//           <div className="right-controls flex items-center">
 //             <div className="notifications">
 //               <FiBell />
 //               <span className="notification-badge">3</span>
 //             </div>
-//             <div className="user-profile">
-//               <div className="avatar">{user?.name?.charAt(0) || "U"}</div>
-//               <div className="user-info">
-//                 <div className="user-name">{user?.name || "User"}</div>
-//                 <div className="user-role">
-//                   {user?.role.replace("_", " ").toUpperCase()}
-//                 </div>
-//               </div>
-//               <button
-//                 onClick={handleLogout}
-//                 className="flex items-center text-muted-foreground hover:text-foreground"
-//               >
-//                 <FiLogOut className="mr-2" />
-//                 Logout
-//               </button>
-//             </div>
 //           </div>
 //         </div>
+
 //         <div className="content-area">{renderMainContent()}</div>
 //       </div>
+
 //       {showAddModal && modalConfig && (
 //         <AddEntityModal
 //           config={modalConfig}
@@ -838,8 +886,7 @@
 //       {showAddTaskModal && (
 //         <AddTaskModal
 //           projects={projects}
-//           // Use the state variable (keep original name if you didn't rename)
-//           selectedProject={selectedProjectForTask || undefined} 
+//           selectedProject={selectedProjectForTask || undefined}
 //           editingTask={editingTask}
 //           employee={
 //             user || {
@@ -857,20 +904,14 @@
 //           onSubmit={editingTask ? handleEditTask : handleAddTask}
 //           onClose={() => {
 //             setShowAddTaskModal(false);
-//             // Use the state variable (keep original name if you didn't rename)
-//             setSelectedProjectForTask(null); 
+//             setSelectedProjectForTask(null);
 //             setEditingTask(null);
 //           }}
-//           // --- FIX 1: Pass tasksData directly ---
-//           tasks={tasksData as Task[]} 
-          
-//           // --- FIX 2: Add the onChangeProject prop ---
+//           tasks={tasksData as Task[]}
 //           onChangeProject={(projectId: string) => {
 //             const newSelectedProject = projects.find(p => p._id === projectId) || null;
-//             // Use the state variable (keep original name if you didn't rename)
-//             setSelectedProjectForTask(newSelectedProject); 
+//             setSelectedProjectForTask(newSelectedProject);
 //           }}
-//           // --- END OF FIXES ---
 //         />
 //       )}
 //     </div>
@@ -1029,6 +1070,7 @@
 // export default ManagerDashboard;
 
 
+
 import React, { useEffect, useState } from "react";
 import {
   FiHome,
@@ -1054,7 +1096,6 @@ import ClientsView from "../../components/clients/Clients";
 import EmployeesView from "../../components/employees/Employee";
 import Settings from "../../components/Setting/Setting";
 
-// --- 1. IMPORT useUpdateClient ---
 import {
   useGetClients,
   useAddClient,
@@ -1083,10 +1124,8 @@ import type { Task, Subtask } from "../../types/task";
 import { useAuthStore } from "../../store/authStore";
 import { useNavigate } from "react-router-dom";
 
-// ====== NEW: import the exact hooks EmployeeDashboard uses ======
 import { useGetAllTimeEntries } from "../../hooks/useTimeEntry";
 import { useGetDeliverables } from "../../hooks/useDeliverable";
-// =============================================================
 
 interface FormField {
   name: string;
@@ -1101,7 +1140,7 @@ interface FormField {
 interface EntityConfig {
   type: "client" | "project" | "employee" | "deliverable";
   title: string;
-  fields: FormField[]; // Use the defined FormField interface
+  fields: FormField[];
   onSubmit: (data: any) => void;
   initialData?: any;
 }
@@ -1120,7 +1159,6 @@ const ManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { mutate: logout } = useAuthLogout();
 
-  // Fetch data
   const { data: clientsData = [], isLoading: clientsLoading } = useGetClients();
   const { data: projectsData, isLoading: projectsLoading } = useGetProjects();
   const { data: employeesData, isLoading: employeesLoading } = useEmployees();
@@ -1136,7 +1174,6 @@ const ManagerDashboard: React.FC = () => {
   const { mutate: updateProject } = useUpdateProject();
   const { mutate: createUser } = useCreateUser();
   const { mutate: updateUser } = useUpdateUser();
-  // --- 2. INITIALIZE useUpdateClient ---
   const { mutate: updateClient } = useUpdateClient();
   const { mutate: createTask } = useCreateTask();
   const { mutate: updateTask } = useUpdateTask();
@@ -1162,7 +1199,6 @@ const ManagerDashboard: React.FC = () => {
     console.log("Projects data:", projectsData);
   }, [projectsData]);
 
-  // Debug log for tasks
   useEffect(() => {
     console.log("Tasks data for project:", {
       projectId: selectedProjectId,
@@ -1171,15 +1207,10 @@ const ManagerDashboard: React.FC = () => {
     });
   }, [selectedProjectId, tasksData]);
 
-  // -----------------------------
-  // NEW: fetch time entries & deliverables the same way EmployeeDashboard does
-  // -----------------------------
-  // We derive the projectId from the same activeView pattern (timesheet-<id>)
   const timesheetProjectId = activeView.startsWith("timesheet-")
     ? activeView.split("timesheet-")[1]
     : "";
 
-  // useGetAllTimeEntries accepts an options object (same shape as EmployeeDashboard)
   const {
     data: managerTimeEntriesData,
     isLoading: managerTimeEntriesLoading,
@@ -1188,7 +1219,6 @@ const ManagerDashboard: React.FC = () => {
     projectId: timesheetProjectId || undefined,
   });
 
-  // useGetDeliverables with enabled flag like EmployeeDashboard
   const {
     data: managerDeliverablesData,
     isLoading: managerDeliverablesLoading,
@@ -1206,20 +1236,15 @@ const ManagerDashboard: React.FC = () => {
       console.error("Manager useGetDeliverables error:", managerDeliverablesError);
     }
   }, [managerDeliverablesError]);
-  // -----------------------------
-  // end new manager fetch wiring
-  // -----------------------------
 
-  // Navigation items
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome /> },
     { id: "projects", label: "Projects", icon: <FiBriefcase /> },
     { id: "clients", label: "Clients", icon: <FiUsers /> },
     { id: "employees", label: "Employees", icon: <FiUser /> },
-    { id: "settings", label: "Settings", icon: <FiSettings /> },
+    { id: "settings", label: "Profile", icon: <FiSettings /> },
   ];
 
-  // Modal configs
   const projectConfig: EntityConfig = {
     type: "project",
     title: "Project",
@@ -1284,7 +1309,7 @@ const ManagerDashboard: React.FC = () => {
         type: "select",
         placeholder: "Select team members",
         options: employees.map((employee) => ({
-          value: employee._id,
+          value: employee._1,
           label: employee.name,
         })),
         multiple: true,
@@ -1461,7 +1486,6 @@ const ManagerDashboard: React.FC = () => {
     },
   };
 
-  // Open add/edit modal
   const openAddModal = (
     type: "project" | "client" | "employee",
     initialData?: any
@@ -1494,7 +1518,6 @@ const ManagerDashboard: React.FC = () => {
               }
             );
           } else {
-            // Use the default onSubmit from projectConfig
             projectConfig.onSubmit(data);
           }
         },
@@ -1505,9 +1528,7 @@ const ManagerDashboard: React.FC = () => {
         title: initialData && initialData._id ? "Edit Client" : "Add Client",
         initialData,
         onSubmit: (data: any) => {
-          // --- 3. IMPLEMENTED THE UPDATE LOGIC ---
           if (initialData && initialData._id) {
-            // Preserve the projects array from initialData
             updateClient(
               {
                 id: initialData._id,
@@ -1527,18 +1548,15 @@ const ManagerDashboard: React.FC = () => {
               }
             );
           } else {
-            // Use the default onSubmit from clientConfig for creating
             clientConfig.onSubmit(data);
           }
         },
       };
     } else {
-      // 'employee'
       config = {
         ...employeeConfig,
         title: initialData && initialData._id ? "Edit Employee" : "Add Employee",
         initialData,
-        // When editing, remove the password field (it shouldn't be required)
         fields:
           initialData && initialData._id
             ? employeeConfig.fields
@@ -1566,7 +1584,6 @@ const ManagerDashboard: React.FC = () => {
               }
             );
           } else {
-            // Use the default onSubmit from employeeConfig
             employeeConfig.onSubmit(data);
           }
         },
@@ -1578,7 +1595,6 @@ const ManagerDashboard: React.FC = () => {
     setErrorMessage(null);
   };
 
-  // Handle edit
   const handleEditProject = (id: string, data: Partial<Project>) => {
     openAddModal("project", {
       _id: id,
@@ -1591,7 +1607,6 @@ const ManagerDashboard: React.FC = () => {
     openAddModal("client", client);
   };
 
-  // Handle add task
   const handleAddTask = (data: {
     title: string;
     description?: string;
@@ -1608,7 +1623,7 @@ const ManagerDashboard: React.FC = () => {
         title: data.title,
         status: data.status,
         priority: data.priority,
-        assignees: data.assignedTo ? [data.assignedTo] : [], // Subtasks use 'assignees' array
+        assignees: data.assignedTo ? [data.assignedTo] : [],
       };
       createSubtask(
         {
@@ -1661,7 +1676,6 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Handle edit task
   const handleEditTask = (data: {
     title: string;
     description?: string;
@@ -1701,10 +1715,8 @@ const ManagerDashboard: React.FC = () => {
     );
   };
 
-  // Open task editing modal
   const openEditTaskModal = (task: Task) => {
     setEditingTask(task);
-    // Set the project for fetching tasks
     const taskProject = projects.find(
       (p) =>
         p._id === (typeof task.project === "string" ? task.project : task.project._id)
@@ -1715,19 +1727,16 @@ const ManagerDashboard: React.FC = () => {
     setShowAddTaskModal(true);
   };
 
-  // Handle logout
   const handleLogout = () => {
     logout();
   };
 
-  // Handler to open Add Task modal from Dashboard
   const openAddTaskFromDashboard = () => {
     setSelectedProjectForTask(null);
-    setEditingTask(null); // Ensure not in edit mode
+    setEditingTask(null);
     setShowAddTaskModal(true);
   };
 
-  // Render main content
   const renderMainContent = () => {
     if (clientsLoading || projectsLoading || employeesLoading || statsLoading) {
       return <div className="p-6">Loading...</div>;
@@ -1752,7 +1761,6 @@ const ManagerDashboard: React.FC = () => {
         );
       }
 
-      // Normalize manager hook returns to the shape ProjectTimesheetView expects
       const hookTimeEntries = managerTimeEntriesData?.timeEntries || managerTimeEntriesData || [];
       const hookDeliverables = managerDeliverablesData?.deliverables || managerDeliverablesData || [];
 
@@ -1764,7 +1772,6 @@ const ManagerDashboard: React.FC = () => {
         <ProjectTimesheetView
           project={{ _id: project._id, name: project.name }}
           timeEntries={(hookTimeEntries as TimeEntry[]) || []}
-          // pass deliverables same as EmployeeDashboard passed to ProjectDetailsView
           projects={projects}
           deliverables={hookDeliverables || []}
           onAddDeliverable={(deliverable) =>
@@ -1802,7 +1809,7 @@ const ManagerDashboard: React.FC = () => {
             onPageChange={(page) => console.log("Page:", page)}
             onAddTask={(project) => {
               setSelectedProjectForTask(project || null);
-              setEditingTask(null); // Ensure not in edit mode
+              setEditingTask(null);
               setShowAddTaskModal(true);
             }}
             onEditTask={openEditTaskModal}
@@ -1853,66 +1860,89 @@ const ManagerDashboard: React.FC = () => {
           </button>
         </div>
       )}
+
       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FiBriefcase className="logo-icon" />
-            <span>ProjectFlow</span>
-          </div>
-          <button
-            className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <FiX />
-          </button>
-        </div>
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeView === item.id ? "active" : ""}`}
-              onClick={() => setActiveView(item.id)}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="main-content">
-        <div className="top-nav">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-            <FiMenu />
-          </button>
-          <div className="search-box">
-            <FiSearch className="search-icon" />
-            <input type="text" placeholder="Search..." />
-          </div>
-          <div className="user-menu">
-            <div className="notifications">
-              <FiBell />
-              <span className="notification-badge">3</span>
+        {/* Wrap sidebar content in a full-height flex column so bottom section sticks to bottom */}
+        <div className="flex flex-col h-full">
+          <div className="sidebar-header">
+            <div className="logo">
+              <FiBriefcase className="logo-icon" />
+              <span>ProjectFlow</span>
             </div>
-            <div className="user-profile">
-              <div className="avatar">{user?.name?.charAt(0) || "U"}</div>
-              <div className="user-info">
-                <div className="user-name">{user?.name || "User"}</div>
-                <div className="user-role">
-                  {user?.role.replace("_", " ").toUpperCase()}
+            <button
+              className="sidebar-close"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <FiX />
+            </button>
+          </div>
+
+          {/* Main nav (exclude the 'settings' / Profile item here so we can render it at bottom) */}
+          <nav className="sidebar-nav">
+            {navItems
+              .filter((item) => item.id !== "settings")
+              .map((item) => (
+                <button
+                  key={item.id}
+                  className={`nav-item ${activeView === item.id ? "active" : ""}`}
+                  onClick={() => setActiveView(item.id)}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </button>
+              ))}
+          </nav>
+
+          {/* BOTTOM: profile + logout — pushed to the very bottom using mt-auto */}
+          <div className="mt-auto px-4 py-4">
+            <button
+              className={`nav-item w-full justify-start profile-footer`}
+              onClick={() => setActiveView("settings")}
+            >
+              <div className="sidebar-profile-footer flex items-center gap-3">
+                <div className="avatar">{user?.name?.charAt(0) || "U"}</div>
+                <div className="sidebar-user-info text-left">
+                  <div className="user-name">{user?.name || "User"}</div>
+                  <div className="user-role text-white font-bold">
+                    {user?.role ? user.role.replace("_", " ").toUpperCase() : ""}
+                  </div>
                 </div>
               </div>
+            </button>
+
+            <div className="mt-4">
               <button
                 onClick={handleLogout}
-                className="flex items-center text-muted-foreground hover:text-foreground"
+                className="w-full px-4 py-2 bg-white text-gray-800 rounded-lg flex items-center justify-center gap-2 shadow-sm"
               >
-                <FiLogOut className="mr-2" />
+                <FiLogOut />
                 Logout
               </button>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="main-content">
+        <div className="top-nav flex items-center justify-between">
+          <div className="left-controls flex items-center">
+            <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
+              <FiMenu />
+            </button>
+          </div>
+
+          {/* right side: place bell icon on the right of the navbar */}
+          <div className="right-controls flex items-center">
+            <div className="notifications">
+              <FiBell />
+              <span className="notification-badge">3</span>
+            </div>
+          </div>
+        </div>
+
         <div className="content-area">{renderMainContent()}</div>
       </div>
+
       {showAddModal && modalConfig && (
         <AddEntityModal
           config={modalConfig}
@@ -1926,8 +1956,7 @@ const ManagerDashboard: React.FC = () => {
       {showAddTaskModal && (
         <AddTaskModal
           projects={projects}
-          // Use the state variable (keep original name if you didn't rename)
-          selectedProject={selectedProjectForTask || undefined} 
+          selectedProject={selectedProjectForTask || undefined}
           editingTask={editingTask}
           employee={
             user || {
@@ -1945,20 +1974,14 @@ const ManagerDashboard: React.FC = () => {
           onSubmit={editingTask ? handleEditTask : handleAddTask}
           onClose={() => {
             setShowAddTaskModal(false);
-            // Use the state variable (keep original name if you didn't rename)
-            setSelectedProjectForTask(null); 
+            setSelectedProjectForTask(null);
             setEditingTask(null);
           }}
-          // --- FIX 1: Pass tasksData directly ---
-          tasks={tasksData as Task[]} 
-          
-          // --- FIX 2: Add the onChangeProject prop ---
+          tasks={tasksData as Task[]}
           onChangeProject={(projectId: string) => {
             const newSelectedProject = projects.find(p => p._id === projectId) || null;
-            // Use the state variable (keep original name if you didn't rename)
-            setSelectedProjectForTask(newSelectedProject); 
+            setSelectedProjectForTask(newSelectedProject);
           }}
-          // --- END OF FIXES ---
         />
       )}
     </div>
