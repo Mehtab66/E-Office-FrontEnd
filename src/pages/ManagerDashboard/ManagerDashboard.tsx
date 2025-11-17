@@ -1245,6 +1245,10 @@ const ManagerDashboard: React.FC = () => {
     { id: "settings", label: "Profile", icon: <FiSettings /> },
   ];
 
+  const normalizedActiveView = activeView.startsWith("timesheet-")
+    ? "projects"
+    : activeView;
+
   const projectConfig: EntityConfig = {
     type: "project",
     title: "Project",
@@ -1884,7 +1888,7 @@ const ManagerDashboard: React.FC = () => {
               .map((item) => (
                 <button
                   key={item.id}
-                  className={`nav-item ${activeView === item.id ? "active" : ""}`}
+                  className={`nav-item ${normalizedActiveView === item.id ? "active" : ""}`}
                   onClick={() => setActiveView(item.id)}
                 >
                   {item.icon}

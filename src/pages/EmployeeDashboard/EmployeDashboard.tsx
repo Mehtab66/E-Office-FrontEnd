@@ -16,7 +16,11 @@ import { useGetAllTasks } from "../../hooks/useTask";
 import { useGetAllTimeEntries } from "../../hooks/useTimeEntry";
 import { useGetDeliverables } from "../../hooks/useDeliverable";
 import { useCreateTask, useCreateSubtask } from "../../hooks/useTask";
-import { useCreateTimeEntry, useDeleteTimeEntry } from "../../hooks/useTimeEntry";
+import {
+  useCreateTimeEntry,
+  useDeleteTimeEntry,
+  useUpdateTimeEntry,
+} from "../../hooks/useTimeEntry";
 import type { Task, Subtask } from "../../types/task";
 import type { TimeEntry } from "../../types/timeEntry";
 import type { Project } from "../../types/project";
@@ -70,6 +74,7 @@ const EmployeeDashboard: React.FC = () => {
 
   // Mutations (no changes needed)
   const createTimeEntry = useCreateTimeEntry();
+  const updateTimeEntry = useUpdateTimeEntry();
   const deleteTimeEntry = useDeleteTimeEntry();
   const createTask = useCreateTask();
   const createSubtask = useCreateSubtask();
@@ -125,46 +130,63 @@ const EmployeeDashboard: React.FC = () => {
       "_id" | "user" | "project" | "createdAt" | "updatedAt"
     >;
   }) => {
+    const forceRefresh = async () => {
+      try {
+        queryClient.invalidateQueries();
+        await queryClient.refetchQueries({ predicate: () => true });
+      } catch (err) {
+        console.error("Error forcing refetch after time entry mutation:", err);
+        try {
+          queryClient.invalidateQueries();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+
     if (editTimeEntry) {
-      // If you implement update logic, it will go here.
-      // Make sure useUpdateTimeEntry expects { projectId, timeEntryId, data }
-      // updateTimeEntry.mutate({ projectId: formData.projectId, timeEntryId: editTimeEntry._id, data: formData.data }, { ... });
-      console.log("Update logic not implemented yet.");
+      const entryId = editTimeEntry._id || (editTimeEntry as any).id;
+      const fallbackProjectId =
+        (typeof editTimeEntry.project === "string"
+          ? editTimeEntry.project
+          : editTimeEntry.project?._id || (editTimeEntry.project as any)?.id) || "";
+
+      if (!entryId) {
+        console.error("Missing time entry id for update");
+        return;
+      }
+
+      updateTimeEntry.mutate(
+        {
+          projectId: formData.projectId || fallbackProjectId,
+          timeEntryId: entryId,
+          data: formData.data,
+        },
+        {
+          onSuccess: async () => {
+            setShowAddTimeModal(false);
+            setEditTimeEntry(undefined);
+            await forceRefresh();
+          },
+        }
+      );
       return;
     }
 
-    // Call the mutation with the exact structure the useCreateTimeEntry hook expects:
-    // { projectId: string, data: object }
     createTimeEntry.mutate(
       {
-        projectId: formData.projectId, // Use projectId from the received formData
-        data: formData.data,           // Use data from the received formData
+        projectId: formData.projectId,
+        data: formData.data,
       },
       {
-        onSuccess: async (res) => {
-          // close modal + reset edit state (unchanged)
+        onSuccess: async () => {
           setShowAddTimeModal(false);
           setEditTimeEntry(undefined);
-
-          // FORCE REFRESH: invalidate all queries then refetch all queries
-          // This is a blunt but reliable approach when queryKey shapes vary.
-          try {
-            // mark everything stale
-            queryClient.invalidateQueries();
-            // then force a refetch for all queries (predicate returns true)
-            await queryClient.refetchQueries({
-              predicate: () => true,
-            });
-          } catch (err) {
-            console.error("Error forcing refetch after creating time entry:", err);
-            // Final fallback: try a simple invalidate again
-            try { queryClient.invalidateQueries(); } catch (e) { /* ignore */ }
-          }
+          await forceRefresh();
         },
         onError: (error) => {
-          // Error is already logged by the hook and shown via toast
           console.error("Mutation error handled by hook:", error);
-        }
+        },
       }
     );
   };

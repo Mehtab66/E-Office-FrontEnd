@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react"; // Added useEffect
 import {
   FiClock,
-  FiPlus,
   FiEdit,
   FiCalendar,
   FiFilter,
@@ -9,13 +8,12 @@ import {
   FiPieChart,
   FiDownload,
   FiPrinter,
-  FiAlertCircle,
   FiTrash2, // Ensure FiTrash2 is imported
 } from "react-icons/fi";
 import AddEntityModal from "../AddEntity/AddEntityModal";
+import AddTimeEntryModal from "../AddTimeEntryModal/TimeEntry"; // <-- modal used for editing time entries
 
 import type { Project, TimeEntry, Deliverable } from "../../types";
-import { useNavigate } from "react-router-dom";
 import apiClient from "../../apis/apiClient";
 
 interface ProjectTimesheetViewProps {
@@ -26,7 +24,7 @@ interface ProjectTimesheetViewProps {
   timeEntries: TimeEntry[];
   deliverables?: Deliverable[];
   projects: Project[];
-  onAddDeliverable: (data: Deliverable) => void;
+  onAddDeliverable?: (data: Deliverable) => void;
   onEditTime?: (entry: TimeEntry) => void;
   onDeleteTime?: (projectId: string, timeEntryId: string) => void;
 }
@@ -40,13 +38,16 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
   onEditTime = () => console.warn("onEditTime handler not provided"),
   onDeleteTime = () => console.warn("onDeleteTime handler not provided"),
 }) => {
-  const navigate = useNavigate();
+  void onAddDeliverable;
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [editingDeliverable, setEditingDeliverable] =
     useState<Deliverable | null>(null);
   const [deliverableToDelete, setDeliverableToDelete] = useState<string | null>(
     null
   );
+  const [deliverableError, setDeliverableError] = useState<string | null>(null);
+  const [isSavingDeliverable, setIsSavingDeliverable] = useState(false);
+  const [isDeletingDeliverable, setIsDeletingDeliverable] = useState(false);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [activeTab, setActiveTab] = useState("timesheet");
@@ -57,10 +58,24 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     setLocalDeliverables(deliverables);
   }, [deliverables]);
 
+  // --- NEW: local copy of time entries for optimistic UI updates & edit/delete ---
+  const [localTimeEntries, setLocalTimeEntries] = useState<TimeEntry[]>(
+    () => (Array.isArray(timeEntries) ? timeEntries : [])
+  );
+  useEffect(() => {
+    setLocalTimeEntries(Array.isArray(timeEntries) ? timeEntries : []);
+  }, [timeEntries]);
+
+  // For editing time entries modal
+  const [editingTimeEntry, setEditingTimeEntry] = useState<TimeEntry | null>(null);
+  const [showEditTimeModal, setShowEditTimeModal] = useState(false);
+  const [editInitialProjectId, setEditInitialProjectId] = useState<string | undefined>(undefined);
+  const [editInitialProject, setEditInitialProject] = useState<Project | undefined>(undefined);
+
   // Fetch and cache user names for any user/employee ids present in entries
   useEffect(() => {
     const ids = new Set<string>();
-    timeEntries.forEach((entry) => {
+    localTimeEntries.forEach((entry) => {
       const candidate = (entry as any).user ?? (entry as any).employee;
       if (typeof candidate === "string") {
         ids.add(candidate);
@@ -96,7 +111,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [timeEntries, userNameById]);
+  }, [localTimeEntries, userNameById]);
 
   // ✅ Helper to resolve user name from user object or id
   const resolveUserName = (entry: TimeEntry): string | null => {
@@ -119,7 +134,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       // First check cache fetched from backend
       if (userNameById[userLike]) return userNameById[userLike];
 
-      const match = timeEntries.find((e) => {
+      const match = localTimeEntries.find((e) => {
         const u = (e as any).user ?? (e as any).employee;
         return (
           typeof u === "object" &&
@@ -145,12 +160,12 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
   // --- TEAM MEMBER NAMES ---
   const allTeamMemberNames = useMemo(() => {
     const employeeNames = new Set<string>();
-    timeEntries.forEach((entry) => {
+    localTimeEntries.forEach((entry) => {
       const userName = resolveUserName(entry);
       if (userName) employeeNames.add(userName);
     });
     return Array.from(employeeNames);
-  }, [timeEntries, userNameById]);
+  }, [localTimeEntries, userNameById]);
 
   const employees = useMemo(() => {
     return ["all", ...allTeamMemberNames];
@@ -158,7 +173,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
 
   // --- FILTER ---
   const filteredTimeEntries = useMemo(() => {
-    return timeEntries.filter((entry) => {
+    return localTimeEntries.filter((entry) => {
       const userName = resolveUserName(entry);
       if (selectedEmployee !== "all" && userName !== selectedEmployee) {
         return false;
@@ -177,7 +192,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         return false;
       return true;
     });
-  }, [timeEntries, selectedEmployee, dateRange, userNameById]);
+  }, [localTimeEntries, selectedEmployee, dateRange, userNameById]);
 
   // --- HOURS SUMMARY ---
   const hoursSummary = useMemo(() => {
@@ -196,6 +211,41 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
   }, [filteredTimeEntries, userNameById]);
 
   // Deliverable form config (unchanged)
+  const handleSaveDeliverable = async (formValues: any) => {
+    if (!editingDeliverable || !project?._id || isSavingDeliverable) return;
+    setIsSavingDeliverable(true);
+    setDeliverableError(null);
+    const deliverableId = String(editingDeliverable._id || (editingDeliverable as any).id || "");
+    const payload = {
+      date: formValues.date,
+      description: formValues.description,
+      notes: formValues.notes || "",
+      status: formValues.status || editingDeliverable.status || "pending",
+    };
+
+    try {
+      const resp = await apiClient.put(
+        `/api/projects/${encodeURIComponent(project._id)}/deliverables/${encodeURIComponent(deliverableId)}`,
+        payload
+      );
+      const updatedDeliverable = resp?.data || { ...editingDeliverable, ...payload };
+      setLocalDeliverables((prev) =>
+        prev.map((d) =>
+          String(d._id || (d as any).id) === deliverableId ? updatedDeliverable : d
+        )
+      );
+      setShowDeliverableModal(false);
+      setEditingDeliverable(null);
+    } catch (error: any) {
+      console.error("Failed to update deliverable:", error);
+      setDeliverableError(
+        error?.response?.data?.error || "Failed to update deliverable. Please try again."
+      );
+    } finally {
+      setIsSavingDeliverable(false);
+    }
+  };
+
   const deliverableConfig = {
     type: "deliverable",
     title: editingDeliverable ? "Edit Deliverable" : "Add Deliverable",
@@ -205,31 +255,37 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       { name: "notes", label: "Notes", type: "textarea", placeholder: "Enter additional notes", required: false },
       { name: "status", label: "Status", type: "select", required: true, options: ["pending", "delivered", "approved"] },
     ],
-    onSubmit: (data: any) => {
-      const deliverableData = {
-        date: data.date,
-        description: data.description,
-        notes: data.notes || "",
-        status: data.status || "pending",
-        project: project._id,
-      };
-      onAddDeliverable(deliverableData as Deliverable);
-      setShowDeliverableModal(false);
-      setEditingDeliverable(null);
-    },
+    onSubmit: handleSaveDeliverable,
     initialData: editingDeliverable || undefined,
   };
 
   const handleEditDeliverable = (deliverable: Deliverable) => {
+    setDeliverableError(null);
     setEditingDeliverable(deliverable);
     setShowDeliverableModal(true);
   };
   const handleDeleteDeliverable = (id: string) => setDeliverableToDelete(id);
-  const confirmDeleteDeliverable = () => {
-    if (deliverableToDelete) {
-      setLocalDeliverables((prev) =>
-        prev.filter((d) => d._id !== deliverableToDelete)
+  const confirmDeleteDeliverable = async () => {
+    if (!deliverableToDelete || !project?._id || isDeletingDeliverable) return;
+    setIsDeletingDeliverable(true);
+    setDeliverableError(null);
+    const previous = localDeliverables;
+    setLocalDeliverables((prev) =>
+      prev.filter((d) => String(d._id || (d as any).id) !== deliverableToDelete)
+    );
+
+    try {
+      await apiClient.delete(
+        `/api/projects/${encodeURIComponent(project._id)}/deliverables/${encodeURIComponent(deliverableToDelete)}`
       );
+    } catch (error: any) {
+      console.error("Failed to delete deliverable:", error);
+      setDeliverableError(
+        error?.response?.data?.error || "Failed to delete deliverable. Please try again."
+      );
+      setLocalDeliverables(previous);
+    } finally {
+      setIsDeletingDeliverable(false);
       setDeliverableToDelete(null);
     }
   };
@@ -260,6 +316,140 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       return "Invalid Date";
     }
   };
+
+  // ----------------------
+  // NEW: Edit & Delete API logic (uses same endpoints as TimesheetsView expectations)
+  // ----------------------
+
+  // Delete time entry: optimistic update + API call
+  const handleDeleteTime = async (entryId: string) => {
+    if (!project._id || !entryId) return;
+
+    // optimistic UI: remove locally
+    const previous = localTimeEntries;
+    setLocalTimeEntries((prev) => prev.filter((e) => (e._id || e.id) !== entryId));
+
+    try {
+      const url = `/api/projects/${encodeURIComponent(project._id)}/time-entries/${encodeURIComponent(
+        entryId
+      )}`;
+      await apiClient.delete(url);
+      // call parent's onDeleteTime as well
+      try {
+        onDeleteTime(project._id, entryId);
+      } catch (e) {
+        // ignore
+      }
+    } catch (err) {
+      console.error("Delete failed, rolling back UI:", err);
+      // rollback
+      setLocalTimeEntries(previous);
+    }
+  };
+
+  // Open edit modal for a time entry
+  const openEditTimeModal = (entry: TimeEntry) => {
+    // determine entry's project id (entry.project may be object or id)
+    const proj = (entry as any).project;
+    let pid: string | undefined = undefined;
+    let pObj: Project | undefined = undefined;
+    if (proj) {
+      if (typeof proj === "string") pid = proj;
+      else pid = proj._id || proj.id;
+      if (pid) {
+        pObj = projects.find((p) => (p._id || p.id) === pid);
+      }
+    }
+    // fallback: use the current view project
+    if (!pid) {
+      pid = project._id;
+      pObj = projects.find((p) => (p._id || p.id) === project._id);
+    }
+
+    setEditInitialProjectId(pid);
+    setEditInitialProject(pObj);
+    setEditingTimeEntry(entry);
+    setShowEditTimeModal(true);
+  };
+
+  // Submit edited time entry: API PATCH/PUT then update local state
+  const handleEditTimeSubmit = async (formData: {
+    projectId: string;
+    data: Omit<
+      TimeEntry,
+      "_id" | "user" | "project" | "createdAt" | "updatedAt"
+    >;
+  }) => {
+    // formData contains projectId and data; we expect editingTimeEntry to be set
+    if (!editingTimeEntry) {
+      setShowEditTimeModal(false);
+      return;
+    }
+    const entryId = editingTimeEntry._id || (editingTimeEntry as any).id;
+    const previous = localTimeEntries;
+
+    // optimistic update locally
+    setLocalTimeEntries((prev) =>
+      prev.map((e) =>
+        (e._id || (e as any).id) === entryId
+          ? { ...e, ...formData.data, project: formData.projectId ? formData.projectId : (e as any).project }
+          : e
+      )
+    );
+
+    setShowEditTimeModal(false);
+
+    try {
+      const url = `/api/projects/${encodeURIComponent(
+        formData.projectId
+      )}/time-entries/${encodeURIComponent(String(entryId))}`;
+      // use PUT to align with backend expectations
+      const resp = await apiClient.put(url, formData.data);
+      const updated = resp?.data || null;
+
+      // replace local entry with server response if provided
+      if (updated) {
+        setLocalTimeEntries((prev) =>
+          prev.map((e) =>
+            (e._id || (e as any).id) === entryId ? updated : e
+          )
+        );
+      }
+
+      // call parent's onEditTime if available
+      try {
+        onEditTime(updated || { ...(editingTimeEntry as any), ...(formData.data as any) });
+      } catch (e) {
+        // ignore
+      }
+    } catch (err) {
+      console.error("Edit update failed, rolling back UI:", err);
+      setLocalTimeEntries(previous);
+    } finally {
+      setEditingTimeEntry(null);
+      setShowEditTimeModal(false);
+      setEditInitialProjectId(undefined);
+      setEditInitialProject(undefined);
+    }
+  };
+
+  // Helper to receive modal submit and compute projectId & data without mixing ?? inline in JSX
+  const handleModalSubmit = (modalPayload: any) => {
+    // modalPayload might be either { projectId, data } or direct data object
+    // avoid mixing && with ?? — use explicit ternary fallback
+    const payloadProjectId = modalPayload && modalPayload.projectId
+      ? modalPayload.projectId
+      : (editInitialProjectId ?? project._id);
+    const payloadData = modalPayload && modalPayload.data ? modalPayload.data : modalPayload;
+    handleEditTimeSubmit({
+      projectId: String(payloadProjectId),
+      data: payloadData,
+    });
+  };
+
+  // ----------------------
+  // Render (unchanged except edit/delete wiring and added Project column)
+  // ----------------------
 
   return (
     <div className="p-6 bg-white rounded-xl shadow-lg">
@@ -363,6 +553,10 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Employee
                   </th>
+                  {/* NEW: Project Name column */}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Project
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
@@ -388,11 +582,35 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                   filteredTimeEntries.map((entry) => {
                     const entryId = entry._id || entry.id;
                     const userName = resolveUserName(entry) || "Unknown User";
+
+                    // derive project name for the time entry (entry.project may be object or id)
+                    const ep = (entry as any).project;
+                    let entryProjectId: string | undefined = undefined;
+                    let entryProjectName = "Project Not Found";
+                    if (ep) {
+                      if (typeof ep === "string") entryProjectId = ep;
+                      else entryProjectId = ep._id || ep.id;
+                    }
+                    if (!entryProjectId) {
+                      // default to current view project
+                      entryProjectId = project._id;
+                      entryProjectName = project.name;
+                    } else {
+                      const found = projects.find((p) => (p._id || p.id) === entryProjectId);
+                      entryProjectName = found ? found.name : String(entryProjectId);
+                    }
+
                     return (
                       <tr key={entryId} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {userName}
                         </td>
+
+                        {/* Project column value */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {entryProjectName}
+                        </td>
+
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(entry.date)}
                         </td>
@@ -418,7 +636,10 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-3">
                           <button
-                            onClick={() => onEditTime(entry)}
+                            onClick={() => {
+                              // open edit modal (local API + modal)
+                              openEditTimeModal(entry);
+                            }}
                             className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                             disabled={!entryId}
                             title="Edit Time Entry"
@@ -428,7 +649,8 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                           <button
                             onClick={() => {
                               if (project._id && entryId) {
-                                onDeleteTime(project._id, entryId);
+                                // call internal delete API
+                                handleDeleteTime(String(entryId));
                               }
                             }}
                             className="text-red-600 hover:text-red-800 disabled:opacity-50"
@@ -444,7 +666,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                 ) : (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-6 py-4 text-center text-gray-500"
                     >
                       No time entries found for this period or employee.
@@ -486,16 +708,12 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Deliverables</h2>
-            <button
-              onClick={() => {
-                setEditingDeliverable(null);
-                setShowDeliverableModal(true);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-            >
-              <FiPlus size={16} /> Add Deliverable
-            </button>
           </div>
+          {deliverableError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+              {deliverableError}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
@@ -531,7 +749,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                        <td className="px-6 py-4 whitespace-nowrap text-gray-900">{deliverable.description}</td>
                        <td className="px-6 py-4 whitespace-nowrap">
                          <span
-                           className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass( // Added inline-flex
+                           className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(
                              deliverable.status
                            )}`}
                          >
@@ -573,7 +791,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                </tbody>
              </table>
            </div>
-        </div>
+      </div>
       )}
 
 
@@ -600,18 +818,39 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
           }}
         />
       )}
+
+      {/* Edit Time Entry Modal (reuses AddTimeEntryModal with same logic) */}
+      {showEditTimeModal && editingTimeEntry && (
+        <AddTimeEntryModal
+          projects={projects}
+          employee={(editingTimeEntry as any).user || (editingTimeEntry as any).employee || null}
+          onSubmit={handleModalSubmit}
+          onClose={() => {
+            setShowEditTimeModal(false);
+            setEditingTimeEntry(null);
+            setEditInitialProjectId(undefined);
+            setEditInitialProject(undefined);
+          }}
+          initialProjectId={String((editInitialProjectId ?? project._id))}
+          initialProject={(editInitialProject ?? projects.find((p) => p._id === project._id)) || undefined}
+          // request modal to show "Selected Project" label for the project select and to show the default selected value
+          projectSelectLabel="Selected Project"
+          // prefill other initial values expected by your modal
+          initialData={editingTimeEntry as any}
+        />
+      )}
+
       {/* Delete Confirmation Modal */}
-      {/* ... (Delete confirmation modal code is fine) ... */}
-       {deliverableToDelete && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> {/* Added padding */}
-           <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl"> {/* Added shadow */}
+      {deliverableToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> {/* Added padding */}
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl"> {/* Added shadow */}
              <h2 className="text-lg font-semibold text-gray-800 mb-4">
                Confirm Delete
              </h2>
              <p className="text-gray-600 mb-6 text-sm"> {/* Adjusted text size */}
                Are you sure you want to delete this deliverable? This action cannot be undone.
              </p>
-             <div className="flex justify-end gap-3"> {/* Adjusted gap */}
+            <div className="flex justify-end gap-3"> {/* Adjusted gap */}
                <button
                  onClick={cancelDeleteDeliverable}
                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium" // Adjusted styles
@@ -619,10 +858,11 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                 Cancel
                </button>
                <button
-                 onClick={confirmDeleteDeliverable}
-                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium" // Adjusted styles
+                onClick={confirmDeleteDeliverable}
+                disabled={isDeletingDeliverable}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 text-sm font-medium" // Adjusted styles
                >
-                Delete
+               {isDeletingDeliverable ? "Deleting..." : "Delete"}
                </button>
              </div>
            </div>

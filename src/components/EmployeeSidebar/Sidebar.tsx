@@ -225,6 +225,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: "timesheets", label: "Timesheets", icon: <FiClock /> },
   ];
 
+  const resolveNavHighlight = (view: string) => {
+    if (view.startsWith("project-")) {
+      return "projects";
+    }
+    return view;
+  };
+
+  const normalizedActiveView = resolveNavHighlight(activeView);
+
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -297,7 +306,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               onMouseEnter={() => setIsHovering(item.id)}
               onMouseLeave={() => setIsHovering(null)}
               className={`w-full flex items-center px-4 py-3.5 mb-1 rounded-xl text-sm font-medium transition-all duration-300 ${
-                activeView === item.id
+                normalizedActiveView === item.id
                   ? "bg-gray-900/5 text-gray-900 border-r-2 border-gray-900"
                   : "text-gray-600/90 hover:bg-gray-100/50"
               }`}
@@ -308,7 +317,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <span
                 className={`mr-3 text-lg transition-colors ${
-                  activeView === item.id ? "text-gray-900" : "text-gray-500"
+                  normalizedActiveView === item.id ? "text-gray-900" : "text-gray-500"
                 }`}
               >
                 {item.icon}
