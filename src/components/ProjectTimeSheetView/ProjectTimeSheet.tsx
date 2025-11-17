@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react"; // Added useEffect
+import React, { useState, useMemo, useEffect, useRef } from "react"; // Added useRef
 import {
   FiClock,
   FiEdit,
@@ -8,10 +8,10 @@ import {
   FiPieChart,
   FiDownload,
   FiPrinter,
-  FiTrash2, // Ensure FiTrash2 is imported
+  FiTrash2,
 } from "react-icons/fi";
 import AddEntityModal from "../AddEntity/AddEntityModal";
-import AddTimeEntryModal from "../AddTimeEntryModal/TimeEntry"; // <-- modal used for editing time entries
+import AddTimeEntryModal from "../AddTimeEntryModal/TimeEntry";
 
 import type { Project, TimeEntry, Deliverable } from "../../types";
 import apiClient from "../../apis/apiClient";
@@ -52,19 +52,44 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [activeTab, setActiveTab] = useState("timesheet");
   const [userNameById, setUserNameById] = useState<Record<string, string>>({});
+  // --- filtering / disable logic ---
+  const [isFiltering, setIsFiltering] = useState(false);
+  const maxTimeoutRef = useRef<number | null>(null);
+  const startFiltering = () => {
+    setIsFiltering(true);
+    if (maxTimeoutRef.current) {
+      window.clearTimeout(maxTimeoutRef.current);
+      maxTimeoutRef.current = null;
+    }
+    maxTimeoutRef.current = window.setTimeout(() => {
+      setIsFiltering(false);
+      maxTimeoutRef.current = null;
+    }, 10000);
+  };
 
   const [localDeliverables, setLocalDeliverables] = useState(deliverables);
   useEffect(() => {
     setLocalDeliverables(deliverables);
   }, [deliverables]);
 
-  // --- NEW: local copy of time entries for optimistic UI updates & edit/delete ---
+  // local copy of time entries for optimistic UI updates & edit/delete
   const [localTimeEntries, setLocalTimeEntries] = useState<TimeEntry[]>(
     () => (Array.isArray(timeEntries) ? timeEntries : [])
   );
   useEffect(() => {
     setLocalTimeEntries(Array.isArray(timeEntries) ? timeEntries : []);
   }, [timeEntries]);
+
+  // clear filtering when local entries update (keeps overlay from getting stuck)
+  useEffect(() => {
+    if (isFiltering) {
+      setIsFiltering(false);
+    }
+    if (maxTimeoutRef.current) {
+      window.clearTimeout(maxTimeoutRef.current);
+      maxTimeoutRef.current = null;
+    }
+  }, [localTimeEntries]);
 
   // For editing time entries modal
   const [editingTimeEntry, setEditingTimeEntry] = useState<TimeEntry | null>(null);
@@ -113,13 +138,11 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     };
   }, [localTimeEntries, userNameById]);
 
-  // ✅ Helper to resolve user name from user object or id
+  // Helper to resolve user name from user object or id
   const resolveUserName = (entry: TimeEntry): string | null => {
-    // Prefer populated 'user' but also support APIs that use 'employee'
     const userLike = (entry as any).user ?? (entry as any).employee;
     if (!userLike) return null;
 
-    // If it's an object, try common name fields
     if (typeof userLike === "object") {
       if (userLike.name) return userLike.name;
       if (userLike.fullName) return userLike.fullName;
@@ -129,9 +152,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       return null;
     }
 
-    // If it's an id string, try to find another entry where the same id is populated
     if (typeof userLike === "string") {
-      // First check cache fetched from backend
       if (userNameById[userLike]) return userNameById[userLike];
 
       const match = localTimeEntries.find((e) => {
@@ -157,7 +178,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     return null;
   };
 
-  // --- TEAM MEMBER NAMES ---
+  // TEAM MEMBER NAMES
   const allTeamMemberNames = useMemo(() => {
     const employeeNames = new Set<string>();
     localTimeEntries.forEach((entry) => {
@@ -171,7 +192,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     return ["all", ...allTeamMemberNames];
   }, [allTeamMemberNames]);
 
-  // --- FILTER ---
+  // FILTER for time entries
   const filteredTimeEntries = useMemo(() => {
     return localTimeEntries.filter((entry) => {
       const userName = resolveUserName(entry);
@@ -194,7 +215,19 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     });
   }, [localTimeEntries, selectedEmployee, dateRange, userNameById]);
 
-  // --- HOURS SUMMARY ---
+  // clear filtering as soon as filtered results update (fixes stuck overlay when user changes From/To)
+  useEffect(() => {
+    if (isFiltering) {
+      setIsFiltering(false);
+    }
+    if (maxTimeoutRef.current) {
+      window.clearTimeout(maxTimeoutRef.current);
+      maxTimeoutRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTimeEntries]);
+
+  // HOURS SUMMARY
   const hoursSummary = useMemo(() => {
     const summary: { [employee: string]: number } = {};
     let totalHours = 0;
@@ -209,6 +242,133 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
 
     return { summary, totalHours };
   }, [filteredTimeEntries, userNameById]);
+
+  // ---------------------
+  // NEW: filteredDeliverables (applies dateRange start/end to deliverables)
+  // ---------------------
+  const filteredDeliverables = useMemo(() => {
+    if (!Array.isArray(localDeliverables)) return [];
+    return localDeliverables.filter((d) => {
+      if (!d || !d.date) return false;
+      try {
+        const dDate = new Date(d.date);
+        if (dateRange.start) {
+          const start = new Date(dateRange.start);
+          if (dDate < start) return false;
+        }
+        if (dateRange.end) {
+          const end = new Date(dateRange.end);
+          // include entries on end date
+          if (dDate > end) return false;
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  }, [localDeliverables, dateRange]);
+
+  // GROUP deliverables: parent + its revisions (use filteredDeliverables so filters apply)
+  // -> improved: if parent missing in filtered list, try to find parent in full deliverables prop and show its real values
+  const groupedDeliverables = useMemo(() => {
+    const arr = Array.isArray(filteredDeliverables) ? filteredDeliverables : [];
+    const map = new Map<string, { parent?: Deliverable | undefined; revisions: Deliverable[] }>();
+
+    // Ensure map entries for all deliverables in filtered set
+    arr.forEach((d) => {
+      const id = String((d as any)._id || (d as any).id || "");
+      if (!map.has(id)) {
+        map.set(id, { parent: undefined, revisions: [] });
+      }
+    });
+
+    // Populate parents and revisions; attempt to attach parent objects from full deliverables list when available
+    arr.forEach((d) => {
+      const id = String((d as any)._id || (d as any).id || "");
+      const parentRaw = (d as any).parent;
+      const parentId =
+        parentRaw == null
+          ? null
+          : typeof parentRaw === "string"
+          ? parentRaw
+          : String(parentRaw._id || parentRaw.id || "");
+
+      if (parentId) {
+        // this is a revision of parentId
+        if (!map.has(parentId)) {
+          map.set(parentId, { parent: undefined, revisions: [] });
+        }
+        map.get(parentId)!.revisions.push(d);
+      } else {
+        // this is a parent/standalone
+        const entry = map.get(id);
+        if (entry) {
+          entry.parent = d;
+        } else {
+          map.set(id, { parent: d, revisions: [] });
+        }
+      }
+    });
+
+    // try to locate parents from the original deliverables prop when parent objects are missing (so we can show a description instead of raw id)
+    map.forEach((value, key) => {
+      if (!value.parent) {
+        const foundParent = (deliverables || []).find(
+          (dv) => String(dv._id || (dv as any).id || "") === String(key)
+        );
+        if (foundParent) {
+          value.parent = foundParent;
+        }
+      }
+    });
+
+    // Build ordered array: preserve order from filteredDeliverables as much as possible
+    const result: Array<{ key: string; parent?: Deliverable; revisions: Deliverable[] }> = [];
+    const seen = new Set<string>();
+
+    arr.forEach((d) => {
+      const id = String((d as any)._id || (d as any).id || "");
+      if (map.has(id) && !seen.has(id)) {
+        const v = map.get(id)!;
+        result.push({ key: id, parent: v.parent, revisions: v.revisions });
+        seen.add(id);
+      }
+      const parentRaw = (d as any).parent;
+      const parentId =
+        parentRaw == null
+          ? null
+          : typeof parentRaw === "string"
+          ? parentRaw
+          : String(parentRaw._id || parentRaw.id || "");
+      if (parentId && map.has(parentId) && !seen.has(parentId)) {
+        const v = map.get(parentId)!;
+        result.push({ key: parentId, parent: v.parent, revisions: v.revisions });
+        seen.add(parentId);
+      }
+    });
+
+    // append any remaining map entries
+    for (const [k, v] of map.entries()) {
+      if (!seen.has(k)) {
+        result.push({ key: k, parent: v.parent, revisions: v.revisions });
+        seen.add(k);
+      }
+    }
+
+    return result;
+  }, [filteredDeliverables, deliverables]);
+
+  // clear filtering overlay also when deliverables results update
+  useEffect(() => {
+    if (isFiltering) {
+      setIsFiltering(false);
+    }
+    if (maxTimeoutRef.current) {
+      window.clearTimeout(maxTimeoutRef.current);
+      maxTimeoutRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredDeliverables]);
 
   // Deliverable form config (unchanged)
   const handleSaveDeliverable = async (formValues: any) => {
@@ -264,7 +424,33 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     setEditingDeliverable(deliverable);
     setShowDeliverableModal(true);
   };
-  const handleDeleteDeliverable = (id: string) => setDeliverableToDelete(id);
+
+  // IMMEDIATE DELETE (no confirmation) — replaces previous set-then-confirm flow
+  const handleDeleteDeliverable = async (id: string) => {
+    if (!id || !project?._id || isDeletingDeliverable) return;
+    setIsDeletingDeliverable(true);
+    setDeliverableError(null);
+    const previous = localDeliverables;
+    setLocalDeliverables((prev) =>
+      prev.filter((d) => String(d._id || (d as any).id) !== id)
+    );
+
+    try {
+      await apiClient.delete(
+        `/api/projects/${encodeURIComponent(project._id)}/deliverables/${encodeURIComponent(id)}`
+      );
+    } catch (error: any) {
+      console.error("Failed to delete deliverable:", error);
+      setDeliverableError(
+        error?.response?.data?.error || "Failed to delete deliverable. Please try again."
+      );
+      setLocalDeliverables(previous);
+    } finally {
+      setIsDeletingDeliverable(false);
+    }
+  };
+
+  // keep confirmDeleteDeliverable/cancel utilities present (unused) to avoid other changes
   const confirmDeleteDeliverable = async () => {
     if (!deliverableToDelete || !project?._id || isDeletingDeliverable) return;
     setIsDeletingDeliverable(true);
@@ -317,24 +503,16 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     }
   };
 
-  // ----------------------
-  // NEW: Edit & Delete API logic (uses same endpoints as TimesheetsView expectations)
-  // ----------------------
-
-  // Delete time entry: optimistic update + API call
+  // Edit & Delete API logic (unchanged)
   const handleDeleteTime = async (entryId: string) => {
     if (!project._id || !entryId) return;
-
-    // optimistic UI: remove locally
     const previous = localTimeEntries;
     setLocalTimeEntries((prev) => prev.filter((e) => (e._id || e.id) !== entryId));
-
     try {
       const url = `/api/projects/${encodeURIComponent(project._id)}/time-entries/${encodeURIComponent(
         entryId
       )}`;
       await apiClient.delete(url);
-      // call parent's onDeleteTime as well
       try {
         onDeleteTime(project._id, entryId);
       } catch (e) {
@@ -342,14 +520,11 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       }
     } catch (err) {
       console.error("Delete failed, rolling back UI:", err);
-      // rollback
       setLocalTimeEntries(previous);
     }
   };
 
-  // Open edit modal for a time entry
   const openEditTimeModal = (entry: TimeEntry) => {
-    // determine entry's project id (entry.project may be object or id)
     const proj = (entry as any).project;
     let pid: string | undefined = undefined;
     let pObj: Project | undefined = undefined;
@@ -360,7 +535,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         pObj = projects.find((p) => (p._id || p.id) === pid);
       }
     }
-    // fallback: use the current view project
     if (!pid) {
       pid = project._id;
       pObj = projects.find((p) => (p._id || p.id) === project._id);
@@ -372,7 +546,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     setShowEditTimeModal(true);
   };
 
-  // Submit edited time entry: API PATCH/PUT then update local state
   const handleEditTimeSubmit = async (formData: {
     projectId: string;
     data: Omit<
@@ -380,7 +553,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       "_id" | "user" | "project" | "createdAt" | "updatedAt"
     >;
   }) => {
-    // formData contains projectId and data; we expect editingTimeEntry to be set
     if (!editingTimeEntry) {
       setShowEditTimeModal(false);
       return;
@@ -388,7 +560,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     const entryId = editingTimeEntry._id || (editingTimeEntry as any).id;
     const previous = localTimeEntries;
 
-    // optimistic update locally
     setLocalTimeEntries((prev) =>
       prev.map((e) =>
         (e._id || (e as any).id) === entryId
@@ -403,11 +574,9 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       const url = `/api/projects/${encodeURIComponent(
         formData.projectId
       )}/time-entries/${encodeURIComponent(String(entryId))}`;
-      // use PUT to align with backend expectations
       const resp = await apiClient.put(url, formData.data);
       const updated = resp?.data || null;
 
-      // replace local entry with server response if provided
       if (updated) {
         setLocalTimeEntries((prev) =>
           prev.map((e) =>
@@ -416,7 +585,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         );
       }
 
-      // call parent's onEditTime if available
       try {
         onEditTime(updated || { ...(editingTimeEntry as any), ...(formData.data as any) });
       } catch (e) {
@@ -433,10 +601,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     }
   };
 
-  // Helper to receive modal submit and compute projectId & data without mixing ?? inline in JSX
   const handleModalSubmit = (modalPayload: any) => {
-    // modalPayload might be either { projectId, data } or direct data object
-    // avoid mixing && with ?? — use explicit ternary fallback
     const payloadProjectId = modalPayload && modalPayload.projectId
       ? modalPayload.projectId
       : (editInitialProjectId ?? project._id);
@@ -447,13 +612,72 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
     });
   };
 
-  // ----------------------
-  // Render (unchanged except edit/delete wiring and added Project column)
-  // ----------------------
+  // DATE VALIDATIONS: same "From" / "To" logic as TimesheetsView
+  const formatISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const todayStr = formatISODate(new Date());
+
+  useEffect(() => {
+    const dateFrom = dateRange.start;
+    const dateTo = dateRange.end;
+
+    if (!dateFrom) return;
+
+    if (dateFrom > todayStr) {
+      setDateRange((prev) => ({ ...prev, start: todayStr, end: todayStr }));
+      return;
+    }
+
+    if (dateFrom === todayStr) {
+      if (dateTo !== todayStr) setDateRange((prev) => ({ ...prev, end: todayStr }));
+      return;
+    }
+
+    if (dateTo && dateTo < dateFrom) {
+      setDateRange((prev) => ({ ...prev, end: dateFrom }));
+    }
+
+    if (dateTo && dateTo > todayStr) {
+      setDateRange((prev) => ({ ...prev, end: todayStr }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.start]);
+
+  useEffect(() => {
+    const dateFrom = dateRange.start;
+    const dateTo = dateRange.end;
+
+    if (!dateTo) return;
+
+    if (dateTo > todayStr) {
+      setDateRange((prev) => ({ ...prev, end: todayStr }));
+    }
+    if (dateFrom && dateTo < dateFrom) {
+      setDateRange((prev) => ({ ...prev, end: dateFrom }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.end, dateRange.start]);
+
+  useEffect(() => {
+    return () => {
+      if (maxTimeoutRef.current) {
+        window.clearTimeout(maxTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-lg">
-      {/* Header */}
+    <div className="p-6 bg-white rounded-xl shadow-lg relative">
+      {isFiltering && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-xl">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full border-4 border-dashed animate-spin" />
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <FiClock className="text-blue-600" /> Timesheet for {project.name}
@@ -468,7 +692,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">
         {["timesheet", "deliverables", "analytics"].map((tab) => (
           <button
@@ -485,7 +708,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         ))}
       </div>
 
-      {/* Filters */}
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -493,6 +715,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
           </h2>
           <button
             onClick={() => {
+              startFiltering();
               setDateRange({ start: "", end: "" });
               setSelectedEmployee("all");
             }}
@@ -502,34 +725,55 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Date & Employee Filters */}
-          {["start", "end"].map((type) => (
-            <div key={type}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {type === "start" ? "Start Date" : "End Date"}
-              </label>
-              <div className="relative">
-                <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="date"
-                  value={dateRange[type]}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, [type]: e.target.value })
-                  }
-                  className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          ))}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Employee
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <div className="relative">
+              <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="date"
+                value={dateRange.start}
+                max={todayStr}
+                onChange={(e) => {
+                  startFiltering();
+                  const val = e.target.value;
+                  setDateRange((prev) => ({ ...prev, start: val }));
+                  if (val === todayStr) {
+                    setDateRange((prev) => ({ ...prev, end: todayStr }));
+                  }
+                }}
+                className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <div className="relative">
+              <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="date"
+                value={dateRange.end}
+                min={dateRange.start || undefined}
+                max={todayStr}
+                onChange={(e) => {
+                  startFiltering();
+                  setDateRange((prev) => ({ ...prev, end: e.target.value }));
+                }}
+                className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
             <div className="relative">
               <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <select
                 value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
+                onChange={(e) => {
+                  startFiltering();
+                  setSelectedEmployee(e.target.value);
+                }}
                 className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {employees.map((employeeName) => (
@@ -543,38 +787,20 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         </div>
       </div>
 
-      {/* Timesheet */}
       {activeTab === "timesheet" && (
         <div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employee
-                  </th>
-                  {/* NEW: Project Name column */}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Project
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Task / Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hours
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Notes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task / Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -583,7 +809,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                     const entryId = entry._id || entry.id;
                     const userName = resolveUserName(entry) || "Unknown User";
 
-                    // derive project name for the time entry (entry.project may be object or id)
                     const ep = (entry as any).project;
                     let entryProjectId: string | undefined = undefined;
                     let entryProjectName = "Project Not Found";
@@ -592,7 +817,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                       else entryProjectId = ep._id || ep.id;
                     }
                     if (!entryProjectId) {
-                      // default to current view project
                       entryProjectId = project._id;
                       entryProjectName = project.name;
                     } else {
@@ -602,216 +826,182 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
 
                     return (
                       <tr key={entryId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {userName}
-                        </td>
-
-                        {/* Project column value */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                          {entryProjectName}
-                        </td>
-
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(entry.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {entry.title || "N/A"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {entry.hours != null ? `${entry.hours}h` : "N/A"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                          {entry.note || "-"}
-                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{userName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{entryProjectName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(entry.date)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.title || "N/A"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.hours != null ? `${entry.hours}h` : "N/A"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{entry.note || "-"}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              entry.approved
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${entry.approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
                             {entry.approved ? "Approved" : "Pending"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-3">
-                          <button
-                            onClick={() => {
-                              // open edit modal (local API + modal)
-                              openEditTimeModal(entry);
-                            }}
-                            className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                            disabled={!entryId}
-                            title="Edit Time Entry"
-                          >
-                            <FiEdit />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (project._id && entryId) {
-                                // call internal delete API
-                                handleDeleteTime(String(entryId));
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                            disabled={!project._id || !entryId}
-                            title="Delete Time Entry"
-                          >
-                            <FiTrash2 />
-                          </button>
+                          <button onClick={() => openEditTimeModal(entry)} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" disabled={!entryId} title="Edit Time Entry"><FiEdit /></button>
+                          <button onClick={() => { if (project._id && entryId) handleDeleteTime(String(entryId)); }} className="text-red-600 hover:text-red-800 disabled:opacity-50" disabled={!project._id || !entryId} title="Delete Time Entry"><FiTrash2 /></button>
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No time entries found for this period or employee.
-                    </td>
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">No time entries found for this period or employee.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Hours Summary */}
           <div className="mt-6 border-t pt-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Hours Summary
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Hours Summary</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(hoursSummary.summary).map(([employeeName, hours]) => (
-                <div
-                  key={employeeName}
-                  className="bg-gray-50 p-4 rounded-lg flex justify-between items-center text-sm"
-                >
+                <div key={employeeName} className="bg-gray-50 p-4 rounded-lg flex justify-between items-center text-sm">
                   <span className="font-medium text-gray-700">{employeeName}</span>
                   <span className="text-gray-900">{hours} hours</span>
                 </div>
               ))}
               <div className="bg-blue-50 p-4 rounded-lg flex justify-between items-center text-sm col-span-1 md:col-span-2">
                 <span className="font-semibold text-blue-800">Total Hours</span>
-                <span className="font-semibold text-blue-900">
-                  {hoursSummary.totalHours} hours
-                </span>
+                <span className="font-semibold text-blue-900">{hoursSummary.totalHours} hours</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Deliverables */}
       {activeTab === "deliverables" && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Deliverables</h2>
+            <div className="text-sm text-gray-500">
+              <span className="font-medium">{groupedDeliverables.length}</span> group(s)
+            </div>
           </div>
           {deliverableError && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-              {deliverableError}
-            </div>
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{deliverableError}</div>
           )}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text
--left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                     Status
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                     Notes
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                     Actions
-                   </th>
-                 </tr>
-               </thead>
-               <tbody className="bg-white divide-y divide-gray-200">
-                 {localDeliverables.length > 0 ? (
-                   localDeliverables.map((deliverable) => (
-                     <tr
-                       key={deliverable._id || deliverable.id} // Use _id or id
-                       className="hover:bg-gray-50"
-                     >
-                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                         {formatDate(deliverable.date)}
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap text-gray-900">{deliverable.description}</td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <span
-                           className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(
-                             deliverable.status
-                           )}`}
-                         >
-                           {/* Capitalize status */}
-                           {deliverable.status ? deliverable.status.charAt(0).toUpperCase() + deliverable.status.slice(1) : 'N/A'}
-                         </span>
-                       </td>
-                       <td className="px-6 py-4 text-gray-500 max-w-xs truncate"> {/* Added max-w truncate */}
-                         {deliverable.notes || "-"}
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-3"> {/* Use flex */}
-                         <button
-                           onClick={() => handleEditDeliverable(deliverable)}
-                           className="text-indigo-600 hover:text-indigo-800"
-                           title="Edit Deliverable" // Add title
-                         >
-                           <FiEdit size={16} />
-                         </button>
-                         <button
-                           onClick={() => handleDeleteDeliverable(deliverable._id || deliverable.id || '')} // Handle potential missing id
-                           className="text-red-600 hover:text-red-800"
-                           title="Delete Deliverable" // Add title
-                         >
-                           <FiTrash2 size={16} />
-                         </button>
-                       </td>
-                     </tr>
-                   ))
-                 ) : (
-                   <tr>
-                     <td
-                       colSpan={5}
-                       className="px-6 py-4 text-center text-gray-500"
-                     >
-                       No deliverables found for this project.
-                     </td>
-                   </tr>
-                 )}
-               </tbody>
-             </table>
-           </div>
-      </div>
-      )}
 
+          {/* NEW UI: grouped deliverables that is clearer and more readable */}
+          <div className="space-y-5">
+            {groupedDeliverables.length > 0 ? (
+              groupedDeliverables.map((group) => {
+                const parent = group.parent;
+                const key = group.key || (parent ? String((parent as any)._id || (parent as any).id) : `parent-${Math.random()}`);
+                const revisionCount = group.revisions ? group.revisions.length : 0;
 
-      {activeTab === "analytics" && (
-        <div>
-          {/* ... Analytics Placeholder ... */}
-           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-             <FiPieChart /> Analytics
-           </h2>
-           <p className="text-gray-600 mt-4">
-             Analytics for {project.name} will be displayed here (e.g., charts,
-             graphs).
-           </p>
+                // If parent missing, attempt to find in full deliverables for display; else show short id
+                const foundParent = parent ? parent : (deliverables || []).find(
+                  (dv) => String(dv._id || (dv as any).id || "") === String(group.key)
+                );
+
+                const parentLabel = foundParent ? (foundParent.description || "Untitled deliverable") : `${String(group.key).slice(0, 8)}...`;
+
+                return (
+                  <div key={key} className="rounded-lg border border-gray-100 bg-white shadow-sm overflow-hidden">
+                    {/* Parent header */}
+                    <div className="p-4 md:p-5 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-sm md:text-base font-semibold text-gray-900 leading-tight">
+                            {foundParent ? parentLabel : `Revision(s) of: ${parentLabel}`}
+                          </h3>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500">
+                            {foundParent ? `Due: ${foundParent.date ? formatDate(foundParent.date) : "N/A"}` : "Parent not found locally"}
+                          </span>
+                        </div>
+
+                        {/* Parent ID (muted) */}
+                        <div className="text-xs text-gray-400 mt-1">
+                          {foundParent ? (
+                            <span title={String(foundParent._id || (foundParent as any).id || "")}>
+                              ID: {String(foundParent._id || (foundParent as any).id || "").slice(0, 10)}...
+                            </span>
+                          ) : (
+                            <span title={String(group.key)}>Parent ID: {String(group.key)}</span>
+                          )}
+                        </div>
+
+                        {/* Parent notes (if any) */}
+                        {foundParent?.notes && (
+                          <p className="text-sm text-gray-500 mt-2 max-w-2xl">{foundParent.notes}</p>
+                        )}
+                      </div>
+
+                      {/* Parent controls & status */}
+                      <div className="flex items-start gap-3">
+                        {foundParent && (
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(foundParent.status)}`}>
+                            {foundParent.status ? foundParent.status.charAt(0).toUpperCase() + foundParent.status.slice(1) : "Pending"}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          {/* If there's a real parent we show edit/delete for it */}
+                          {foundParent && (
+                            <>
+                              <button onClick={() => handleEditDeliverable(foundParent)} className="text-indigo-600 hover:text-indigo-800" title="Edit Deliverable"><FiEdit size={16} /></button>
+                              <button onClick={() => handleDeleteDeliverable(String(foundParent._id || (foundParent as any).id || ""))} className="text-red-600 hover:text-red-800" title="Delete Deliverable"><FiTrash2 size={16} /></button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Revisions area */}
+                    <div className="border-t border-gray-100 bg-gray-50 p-4 md:p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm text-gray-700 font-medium">Revisions ({revisionCount})</div>
+                        <div className="text-xs text-gray-400">Showing revisions that match current filters</div>
+                      </div>
+
+                      {revisionCount > 0 ? (
+                        <div className="space-y-3">
+                          {group.revisions.map((rev) => (
+                            <div key={(rev as any)._id || (rev as any).id} className="p-3 rounded-md bg-white border border-gray-100 flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm text-gray-900">{rev.description || "Untitled revision"}</p>
+                                <p className="text-sm text-gray-500 mt-1">Due: {rev.date ? formatDate(rev.date) : "N/A"}</p>
+                                {rev.notes && <p className="text-sm text-gray-400 mt-2">{rev.notes}</p>}
+                                <div className="text-xs text-gray-400 mt-2">Revision ID: {(rev as any)._id ? String((rev as any)._id).slice(0,10) + "..." : (rev as any).id ? String((rev as any).id).slice(0,10) + "..." : "n/a"}</div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(rev.status)}`}>
+                                  {rev.status ? rev.status.charAt(0).toUpperCase() + rev.status.slice(1) : "Pending"}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => handleEditDeliverable(rev)} className="text-indigo-600 hover:text-indigo-800" title="Edit Revision"><FiEdit size={16} /></button>
+                                  <button onClick={() => handleDeleteDeliverable(String(rev._id || (rev as any).id || ""))} className="text-red-600 hover:text-red-800" title="Delete Revision"><FiTrash2 size={16} /></button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 py-3">No revisions found for this parent within the selected date range.</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-6 text-center text-gray-500">No deliverables found for this project.</div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Deliverable Modal */}
+      {activeTab === "analytics" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><FiPieChart /> Analytics</h2>
+          <p className="text-gray-600 mt-4">Analytics for {project.name} will be displayed here (e.g., charts, graphs).</p>
+        </div>
+      )}
+
       {showDeliverableModal && (
         <AddEntityModal
-          config={deliverableConfig as any} // Cast config type if needed by AddEntityModal
+          config={deliverableConfig as any}
           onClose={() => {
             setShowDeliverableModal(false);
             setEditingDeliverable(null);
@@ -819,7 +1009,6 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         />
       )}
 
-      {/* Edit Time Entry Modal (reuses AddTimeEntryModal with same logic) */}
       {showEditTimeModal && editingTimeEntry && (
         <AddTimeEntryModal
           projects={projects}
@@ -833,41 +1022,11 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
           }}
           initialProjectId={String((editInitialProjectId ?? project._id))}
           initialProject={(editInitialProject ?? projects.find((p) => p._id === project._id)) || undefined}
-          // request modal to show "Selected Project" label for the project select and to show the default selected value
           projectSelectLabel="Selected Project"
-          // prefill other initial values expected by your modal
           initialData={editingTimeEntry as any}
         />
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deliverableToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> {/* Added padding */}
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl"> {/* Added shadow */}
-             <h2 className="text-lg font-semibold text-gray-800 mb-4">
-               Confirm Delete
-             </h2>
-             <p className="text-gray-600 mb-6 text-sm"> {/* Adjusted text size */}
-               Are you sure you want to delete this deliverable? This action cannot be undone.
-             </p>
-            <div className="flex justify-end gap-3"> {/* Adjusted gap */}
-               <button
-                 onClick={cancelDeleteDeliverable}
-                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium" // Adjusted styles
-               >
-                Cancel
-               </button>
-               <button
-                onClick={confirmDeleteDeliverable}
-                disabled={isDeletingDeliverable}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 text-sm font-medium" // Adjusted styles
-               >
-               {isDeletingDeliverable ? "Deleting..." : "Delete"}
-               </button>
-             </div>
-           </div>
-         </div>
-       )}
     </div>
   );
 };
