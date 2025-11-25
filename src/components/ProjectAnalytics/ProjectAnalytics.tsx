@@ -323,37 +323,17 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-    Legend
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from "recharts";
 import { FiClock, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import apiClient from "../../apis/apiClient";
 import type { TimeEntry, Deliverable, User } from "../../types";
 
-interface PopulatedTimeEntry extends Omit<TimeEntry, 'employee'> {
-    user?: { _id: string; name: string; firstName?: string; lastName?: string } | string;
-    hours: number;
-    date: string;
-}
-
-interface PopulatedDeliverable extends Deliverable {
-    createdBy?: { _id: string; name: string; firstName?: string; lastName?: string } | string;
-    date: string;
-}
-
 interface ProjectAnalyticsProps {
     projectId: string;
     filterStartDate: string;
     filterEndDate: string;
-    filterEmployeeName: string; // Recieving Name from parent
+    filterEmployeeName: string;
 }
 
 const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({
@@ -364,126 +344,131 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({
 }) => {
     const [dataType, setDataType] = useState<"timesheet" | "deliverables">("timesheet");
     const [users, setUsers] = useState<User[]>([]);
-    const [timeEntries, setTimeEntries] = useState<PopulatedTimeEntry[]>([]);
-    const [deliverables, setDeliverables] = useState<PopulatedDeliverable[]>([]);
+    const [timeEntries, setTimeEntries] = useState<any[]>([]);
+    const [deliverables, setDeliverables] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
-    // 1. Fetch Users so we can map "Name" -> "ID"
+    // 1. Fetch Users List (Essential for mapping Names to IDs)
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const response = await apiClient.get("/api/analytics/users");
-                setUsers(response.data);
-            } catch (err) {
-                console.error("Error fetching users:", err);
-            }
-        };
-        fetchUsers();
+        apiClient.get("/api/analytics/users")
+            .then(res => setUsers(res.data))
+            .catch(err => console.error("Failed to load users for mapping", err));
     }, []);
 
-    // 2. Fetch Data
+    // 2. MAIN FETCH LOGIC - Triggers whenever filters change
     useEffect(() => {
-        const fetchAnalytics = async () => {
-            if (!projectId) return;
+        if (!projectId) return;
 
+        const fetchData = async () => {
             setLoading(true);
-            setError(null);
             try {
-                const queryParams = new URLSearchParams();
-                queryParams.append("projectId", projectId);
+                const params = new URLSearchParams();
+                params.append("projectId", projectId);
 
-                // Pass Dates
-                if (filterStartDate) queryParams.append("startDate", filterStartDate);
-                if (filterEndDate) queryParams.append("endDate", filterEndDate);
+                // --- Date Filters ---
+                if (filterStartDate) params.append("startDate", filterStartDate);
+                if (filterEndDate) params.append("endDate", filterEndDate);
+                // Default to 'all' if no dates selected to show history
+                if (!filterStartDate && !filterEndDate) params.append("timeSpan", "all");
 
-                // MAGIC FIX: Convert Name to ID
-                if (filterEmployeeName && filterEmployeeName !== "all" && users.length > 0) {
-                    const matchedUser = users.find(u => {
-                        // Match Name exactly how Parent constructs it
-                        const name1 = u.name;
-                        const name2 = (u.firstName || "") + (u.lastName ? ` ${u.lastName}` : "");
-                        return name1 === filterEmployeeName || name2.trim() === filterEmployeeName;
-                    });
+                // --- Employee Filter (Name -> ID Logic) ---
+                if (filterEmployeeName && filterEmployeeName !== "all" && filterEmployeeName !== "All Employees") {
+                    // We need users to be loaded to perform this map
+                    if (users.length > 0) {
+                        const targetName = filterEmployeeName.toLowerCase().trim();
 
-                    if (matchedUser) {
-                        queryParams.append("userId", matchedUser._id);
-                    } else {
-                        console.warn("Could not find user ID for name:", filterEmployeeName);
+                        const matchedUser = users.find(u => {
+                            const simpleName = (u.name || "").toLowerCase();
+                            const fullName = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase().trim();
+                            const email = (u.email || "").toLowerCase();
+
+                            return simpleName === targetName || fullName === targetName || email.includes(targetName);
+                        });
+
+                        if (matchedUser) {
+                            params.append("userId", matchedUser._id);
+                            console.log(`✅ Filter: Mapped "${filterEmployeeName}" -> ID ${matchedUser._id}`);
+                        } else {
+                            console.warn(`⚠️ Filter Warning: Could not find User ID for "${filterEmployeeName}". Fetching all users.`);
+                        }
                     }
                 }
 
-                // If no dates, force 'all' to ensure data shows up
-                if (!filterStartDate && !filterEndDate) {
-                    queryParams.append("timeSpan", "all");
-                }
+                console.log(`🚀 Fetching Analytics: ${params.toString()}`);
 
-                const response = await apiClient.get(`/api/analytics?${queryParams.toString()}`);
-                const data = response.data;
+                const response = await apiClient.get(`/api/analytics?${params.toString()}`);
 
-                setTimeEntries(data.timeEntries || []);
-                setDeliverables(data.deliverables || []);
+                setTimeEntries(response.data.timeEntries || []);
+                setDeliverables(response.data.deliverables || []);
+                setError(null);
+
             } catch (err: any) {
-                console.error("Fetch error:", err);
-                setError("Failed to load analytics.");
+                console.error("Fetch failed", err);
+                setError("Failed to load analytics data");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchAnalytics();
-    }, [projectId, filterStartDate, filterEndDate, filterEmployeeName, users]); // Re-run when filters change
+        // If filtering by employee, wait for users list to load first
+        if (filterEmployeeName && filterEmployeeName !== "all" && users.length === 0) {
+            // Do nothing, wait for users useEffect to fire and update 'users' state
+            return;
+        }
 
-    // 3. Chart Data Preparation
+        fetchData();
+
+    }, [projectId, filterStartDate, filterEndDate, filterEmployeeName, users]); // Dependencies ensure this runs on ANY change
+
+    // 3. Process Chart Data
     const chartData = useMemo(() => {
-        if (loading && timeEntries.length === 0 && deliverables.length === 0) return [];
-
-        const toISODate = (d: Date) => d.toISOString().split('T')[0];
+        if (loading && timeEntries.length === 0) return [];
 
         let startDate = new Date();
         let endDate = new Date();
 
-        // Use filters if available, else auto-scale
+        // Determine Start
         if (filterStartDate) {
             startDate = new Date(filterStartDate);
         } else {
-            // Auto-scale to data
+            // Auto-scale
             const allDates = [...timeEntries, ...deliverables].map(x => new Date(x.date).getTime());
             if (allDates.length > 0) startDate = new Date(Math.min(...allDates));
-            else startDate.setDate(new Date().getDate() - 7);
+            else startDate.setDate(new Date().getDate() - 30);
         }
 
-        if (filterEndDate) {
-            endDate = new Date(filterEndDate);
-        }
+        // Determine End
+        if (filterEndDate) endDate = new Date(filterEndDate);
 
         // Normalize
         startDate.setHours(0, 0, 0, 0);
         endDate.setHours(23, 59, 59, 999);
 
-        // Fill Gaps
+        // Continuous Timeline
         const dataMap = new Map<string, { displayDate: string; total: number }>();
         let iter = new Date(startDate);
 
-        while (iter <= endDate) {
-            const key = toISODate(iter);
-            dataMap.set(key, {
+        // Loop safety
+        let safety = 0;
+        while (iter <= endDate && safety < 5000) {
+            const iso = iter.toISOString().split('T')[0];
+            dataMap.set(iso, {
                 displayDate: iter.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 total: 0
             });
             iter.setDate(iter.getDate() + 1);
+            safety++;
         }
 
+        // Fill Data
         const items = dataType === "timesheet" ? timeEntries : deliverables;
         items.forEach(item => {
             if (!item.date) return;
-            const itemDate = new Date(item.date);
-            // Fix timezone offset for display
-            const key = toISODate(itemDate);
-
-            if (dataMap.has(key)) {
-                const entry = dataMap.get(key)!;
-                if (dataType === "timesheet") entry.total += (item as PopulatedTimeEntry).hours || 0;
+            const k = new Date(item.date).toISOString().split('T')[0];
+            if (dataMap.has(k)) {
+                const entry = dataMap.get(k)!;
+                if (dataType === "timesheet") entry.total += item.hours || 0;
                 else entry.total += 1;
             }
         });
@@ -494,63 +479,57 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({
     const totalCount = useMemo(() => chartData.reduce((acc, curr) => acc + curr.total, 0), [chartData]);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Toggle Buttons */}
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center">
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
-                    <button onClick={() => setDataType("timesheet")} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${dataType === "timesheet" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600"}`}>Timesheets</button>
-                    <button onClick={() => setDataType("deliverables")} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${dataType === "deliverables" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600"}`}>Deliverables</button>
+        <div className="space-y-6">
+            {!projectId && <div className="text-red-600">Error: Project ID Missing</div>}
+
+            <div className="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
+                <div className="flex bg-white rounded-md shadow-sm">
+                    <button onClick={() => setDataType("timesheet")} className={`px-4 py-2 text-sm font-medium rounded-l-md ${dataType === "timesheet" ? "bg-blue-50 text-blue-600" : "text-gray-600"}`}>Timesheets</button>
+                    <button onClick={() => setDataType("deliverables")} className={`px-4 py-2 text-sm font-medium rounded-r-md ${dataType === "deliverables" ? "bg-blue-50 text-blue-600" : "text-gray-600"}`}>Deliverables</button>
                 </div>
-                <div className="text-sm text-gray-500">
-                    Filters applied from above
-                </div>
+                <span className="text-xs text-gray-500">
+                    Showing data for: <b>{filterEmployeeName === "all" ? "All Employees" : filterEmployeeName}</b>
+                    {filterStartDate ? ` from ${filterStartDate}` : ""}
+                    {filterEndDate ? ` to ${filterEndDate}` : ""}
+                </span>
             </div>
 
             {loading ? (
                 <div className="flex justify-center h-64 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-            ) : error ? (
-                <div className="text-red-500 text-center">{error}</div>
             ) : (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100 shadow-sm">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-sm font-medium text-blue-600 mb-1">Total {dataType === "timesheet" ? "Hours" : "Deliverables"}</p>
-                                    <h3 className="text-3xl font-bold text-gray-900">{totalCount}</h3>
-                                </div>
-                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                                    {dataType === "timesheet" ? <FiClock size={24} /> : <FiCheckCircle size={24} />}
-                                </div>
+                    <div className="bg-white p-6 rounded-xl border shadow-sm">
+                        <div className="flex justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total {dataType === "timesheet" ? "Hours" : "Deliverables"}</p>
+                                <h3 className="text-3xl font-bold text-gray-900">{totalCount}</h3>
                             </div>
+                            <FiClock className="text-blue-500 w-8 h-8" />
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-6">{dataType === "timesheet" ? "Hours Logged" : "Deliverables Submitted"}</h3>
-                        <div className="h-[400px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                {dataType === "timesheet" ? (
-                                    <LineChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                        <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} minTickGap={30} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                                        <Tooltip formatter={(value: number) => [`${value} hrs`, "Hours"]} />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="total" name="Hours" stroke="#2563eb" strokeWidth={3} dot={{ fill: '#2563eb', strokeWidth: 2, r: 4, stroke: '#fff' }} connectNulls={true} />
-                                    </LineChart>
-                                ) : (
-                                    <BarChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                        <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} minTickGap={30} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} allowDecimals={false} />
-                                        <Tooltip formatter={(value: number) => [value, "Count"]} />
-                                        <Legend />
-                                        <Bar dataKey="total" name="Deliverables" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={40} />
-                                    </BarChart>
-                                )}
-                            </ResponsiveContainer>
-                        </div>
+                    <div className="bg-white p-6 rounded-xl border shadow-sm h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            {dataType === "timesheet" ? (
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} minTickGap={30} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} />
+                                </LineChart>
+                            ) : (
+                                <BarChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} minTickGap={30} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="total" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            )}
+                        </ResponsiveContainer>
                     </div>
                 </>
             )}

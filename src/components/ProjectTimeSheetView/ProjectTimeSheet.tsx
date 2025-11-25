@@ -2175,8 +2175,13 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       )}
 
       {activeTab === "analytics" && (
-        // --- THIS IS THE FIX ---
-        <ProjectAnalytics projectId={project._id} />
+        <ProjectAnalytics
+          projectId={project._id}
+          // Pass the state variables from this file down to the child
+          filterStartDate={dateRange.start}
+          filterEndDate={dateRange.end}
+          filterEmployeeName={selectedEmployee}
+        />
       )}
 
       {showDeliverableModal && (
