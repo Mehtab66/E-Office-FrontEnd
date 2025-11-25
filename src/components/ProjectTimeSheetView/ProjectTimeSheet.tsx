@@ -12,6 +12,7 @@
 // } from "react-icons/fi";
 // import AddEntityModal from "../AddEntity/AddEntityModal";
 // import AddTimeEntryModal from "../AddTimeEntryModal/TimeEntry";
+// import ProjectAnalytics from "../ProjectAnalytics/ProjectAnalytics";
 
 // import type { Project, TimeEntry, Deliverable } from "../../types";
 // import apiClient from "../../apis/apiClient";
@@ -96,6 +97,55 @@
 //   const [showEditTimeModal, setShowEditTimeModal] = useState(false);
 //   const [editInitialProjectId, setEditInitialProjectId] = useState<string | undefined>(undefined);
 //   const [editInitialProject, setEditInitialProject] = useState<Project | undefined>(undefined);
+
+//   // TIMELINE FILTER: new state
+//   const [timeline, setTimeline] = useState<string>("all"); // "all" | "custom" | "7days" | "1month" | "3month" | "6month" | "1year"
+
+//   const calculateStartForTimeline = (tl: string) => {
+//     if (!tl || tl === "all" || tl === "custom") return "";
+//     const now = new Date();
+//     const start = new Date(now);
+//     switch (tl) {
+//       case "7days":
+//         // last 7 days including today
+//         start.setDate(now.getDate() - 6);
+//         break;
+//       case "1month":
+//         start.setMonth(now.getMonth() - 1);
+//         break;
+//       case "3month":
+//         start.setMonth(now.getMonth() - 3);
+//         break;
+//       case "6month":
+//         start.setMonth(now.getMonth() - 6);
+//         break;
+//       case "1year":
+//         start.setFullYear(now.getFullYear() - 1);
+//         break;
+//       default:
+//         return "";
+//     }
+//     // keep time portion normalized away
+//     start.setHours(0, 0, 0, 0);
+//     return formatISODate(start);
+//   };
+
+//   // When timeline changes, update dateRange accordingly (except for 'custom')
+//   useEffect(() => {
+//     if (timeline === "custom") {
+//       return;
+//     }
+//     if (timeline === "all") {
+//       startFiltering();
+//       setDateRange({ start: "", end: "" });
+//       return;
+//     }
+//     const start = calculateStartForTimeline(timeline);
+//     const end = formatISODate(new Date());
+//     startFiltering();
+//     setDateRange({ start, end });
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [timeline]);
 
 //   // Fetch and cache user names for any user/employee ids present in entries
 //   useEffect(() => {
@@ -290,8 +340,8 @@
 //         parentRaw == null
 //           ? null
 //           : typeof parentRaw === "string"
-//           ? parentRaw
-//           : String(parentRaw._id || parentRaw.id || "");
+//             ? parentRaw
+//             : String(parentRaw._id || parentRaw.id || "");
 
 //       if (parentId) {
 //         // this is a revision of parentId
@@ -338,8 +388,8 @@
 //         parentRaw == null
 //           ? null
 //           : typeof parentRaw === "string"
-//           ? parentRaw
-//           : String(parentRaw._id || parentRaw.id || "");
+//             ? parentRaw
+//             : String(parentRaw._id || parentRaw.id || "");
 //       if (parentId && map.has(parentId) && !seen.has(parentId)) {
 //         const v = map.get(parentId)!;
 //         result.push({ key: parentId, parent: v.parent, revisions: v.revisions });
@@ -696,11 +746,10 @@
 //         {["timesheet", "deliverables", "analytics"].map((tab) => (
 //           <button
 //             key={tab}
-//             className={`px-4 py-2 font-medium ${
-//               activeTab === tab
-//                 ? "text-blue-600 border-b-2 border-blue-600"
-//                 : "text-gray-500 hover:text-gray-700"
-//             }`}
+//             className={`px-4 py-2 font-medium ${activeTab === tab
+//               ? "text-blue-600 border-b-2 border-blue-600"
+//               : "text-gray-500 hover:text-gray-700"
+//               }`}
 //             onClick={() => setActiveTab(tab)}
 //           >
 //             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -718,13 +767,14 @@
 //               startFiltering();
 //               setDateRange({ start: "", end: "" });
 //               setSelectedEmployee("all");
+//               setTimeline("all");
 //             }}
 //             className="text-sm text-blue-600 hover:text-blue-800"
 //           >
 //             Clear All
 //           </button>
 //         </div>
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 //           <div>
 //             <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
 //             <div className="relative">
@@ -737,6 +787,7 @@
 //                   startFiltering();
 //                   const val = e.target.value;
 //                   setDateRange((prev) => ({ ...prev, start: val }));
+//                   setTimeline("custom");
 //                   if (val === todayStr) {
 //                     setDateRange((prev) => ({ ...prev, end: todayStr }));
 //                   }
@@ -758,6 +809,7 @@
 //                 onChange={(e) => {
 //                   startFiltering();
 //                   setDateRange((prev) => ({ ...prev, end: e.target.value }));
+//                   setTimeline("custom");
 //                 }}
 //                 className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 //               />
@@ -781,6 +833,30 @@
 //                     {employeeName === "all" ? "All Employees" : employeeName}
 //                   </option>
 //                 ))}
+//               </select>
+//             </div>
+//           </div>
+
+//           {/* TIMELINE SELECT - new filter (applies to both timesheets and deliverables via dateRange) */}
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-1">Timeline</label>
+//             <div className="relative">
+//               <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+//               <select
+//                 value={timeline}
+//                 onChange={(e) => {
+//                   const val = e.target.value;
+//                   setTimeline(val);
+//                 }}
+//                 className="w-full pl-10 p-2 border border-gray-300 rounded-md text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               >
+//                 <option value="all">All Time</option>
+//                 <option value="7days">Last 7 days</option>
+//                 <option value="1month">Last 1 month</option>
+//                 <option value="3month">Last 3 months</option>
+//                 <option value="6month">Last 6 months</option>
+//                 <option value="1year">Last 1 year</option>
+//                 <option value="custom">Custom (use From/To)</option>
 //               </select>
 //             </div>
 //           </div>
@@ -964,7 +1040,7 @@
 //                                 <p className="font-medium text-sm text-gray-900">{rev.description || "Untitled revision"}</p>
 //                                 <p className="text-sm text-gray-500 mt-1">Due: {rev.date ? formatDate(rev.date) : "N/A"}</p>
 //                                 {rev.notes && <p className="text-sm text-gray-400 mt-2">{rev.notes}</p>}
-//                                 <div className="text-xs text-gray-400 mt-2">Revision ID: {(rev as any)._id ? String((rev as any)._id).slice(0,10) + "..." : (rev as any).id ? String((rev as any).id).slice(0,10) + "..." : "n/a"}</div>
+//                                 <div className="text-xs text-gray-400 mt-2">Revision ID: {(rev as any)._id ? String((rev as any)._id).slice(0, 10) + "..." : (rev as any).id ? String((rev as any).id).slice(0, 10) + "..." : "n/a"}</div>
 //                               </div>
 //                               <div className="flex flex-col items-end gap-2">
 //                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(rev.status)}`}>
@@ -993,10 +1069,7 @@
 //       )}
 
 //       {activeTab === "analytics" && (
-//         <div>
-//           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><FiPieChart /> Analytics</h2>
-//           <p className="text-gray-600 mt-4">Analytics for {project.name} will be displayed here (e.g., charts, graphs).</p>
-//         </div>
+//         <ProjectAnalytics />
 //       )}
 
 //       {showDeliverableModal && (
@@ -1031,8 +1104,7 @@
 //   );
 // };
 // export default ProjectTimesheetView;
-
-import React, { useState, useMemo, useEffect, useRef } from "react"; // Added useRef
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   FiClock,
   FiEdit,
@@ -1046,6 +1118,7 @@ import {
 } from "react-icons/fi";
 import AddEntityModal from "../AddEntity/AddEntityModal";
 import AddTimeEntryModal from "../AddTimeEntryModal/TimeEntry";
+import ProjectAnalytics from "../ProjectAnalytics/ProjectAnalytics";
 
 import type { Project, TimeEntry, Deliverable } from "../../types";
 import apiClient from "../../apis/apiClient";
@@ -1373,8 +1446,8 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         parentRaw == null
           ? null
           : typeof parentRaw === "string"
-          ? parentRaw
-          : String(parentRaw._id || parentRaw.id || "");
+            ? parentRaw
+            : String(parentRaw._id || parentRaw.id || "");
 
       if (parentId) {
         // this is a revision of parentId
@@ -1421,8 +1494,8 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         parentRaw == null
           ? null
           : typeof parentRaw === "string"
-          ? parentRaw
-          : String(parentRaw._id || parentRaw.id || "");
+            ? parentRaw
+            : String(parentRaw._id || parentRaw.id || "");
       if (parentId && map.has(parentId) && !seen.has(parentId)) {
         const v = map.get(parentId)!;
         result.push({ key: parentId, parent: v.parent, revisions: v.revisions });
@@ -1779,11 +1852,10 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
         {["timesheet", "deliverables", "analytics"].map((tab) => (
           <button
             key={tab}
-            className={`px-4 py-2 font-medium ${
-              activeTab === tab
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2 font-medium ${activeTab === tab
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500 hover:text-gray-700"
+              }`}
             onClick={() => setActiveTab(tab)}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -2074,7 +2146,7 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
                                 <p className="font-medium text-sm text-gray-900">{rev.description || "Untitled revision"}</p>
                                 <p className="text-sm text-gray-500 mt-1">Due: {rev.date ? formatDate(rev.date) : "N/A"}</p>
                                 {rev.notes && <p className="text-sm text-gray-400 mt-2">{rev.notes}</p>}
-                                <div className="text-xs text-gray-400 mt-2">Revision ID: {(rev as any)._id ? String((rev as any)._id).slice(0,10) + "..." : (rev as any).id ? String((rev as any).id).slice(0,10) + "..." : "n/a"}</div>
+                                <div className="text-xs text-gray-400 mt-2">Revision ID: {(rev as any)._id ? String((rev as any)._id).slice(0, 10) + "..." : (rev as any).id ? String((rev as any).id).slice(0, 10) + "..." : "n/a"}</div>
                               </div>
                               <div className="flex flex-col items-end gap-2">
                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(rev.status)}`}>
@@ -2103,10 +2175,8 @@ const ProjectTimesheetView: React.FC<ProjectTimesheetViewProps> = ({
       )}
 
       {activeTab === "analytics" && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><FiPieChart /> Analytics</h2>
-          <p className="text-gray-600 mt-4">Analytics for {project.name} will be displayed here (e.g., charts, graphs).</p>
-        </div>
+        // --- THIS IS THE FIX ---
+        <ProjectAnalytics projectId={project._id} />
       )}
 
       {showDeliverableModal && (
