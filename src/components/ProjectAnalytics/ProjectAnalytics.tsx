@@ -482,7 +482,7 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({
         <div className="space-y-6">
             {!projectId && <div className="text-red-600">Error: Project ID Missing</div>}
 
-            <div className="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
+            <div className="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border export-exclude">
                 <div className="flex bg-white rounded-md shadow-sm">
                     <button onClick={() => setDataType("timesheet")} className={`px-4 py-2 text-sm font-medium rounded-l-md ${dataType === "timesheet" ? "bg-blue-50 text-blue-600" : "text-gray-600"}`}>Timesheets</button>
                     <button onClick={() => setDataType("deliverables")} className={`px-4 py-2 text-sm font-medium rounded-r-md ${dataType === "deliverables" ? "bg-blue-50 text-blue-600" : "text-gray-600"}`}>Deliverables</button>
