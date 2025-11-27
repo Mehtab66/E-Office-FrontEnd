@@ -134,7 +134,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               className="p-2 text-gray-400 hover:text-indigo-600 transition-colors relative"
               onClick={() => {
                 setShowNotifications(!showNotifications);
-                if (!showNotifications) setUnreadCount(0);
               }}
             >
               <FiBell className="text-xl" />
@@ -149,14 +148,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-96 overflow-y-auto">
                 <div className="p-3 border-b border-gray-100 flex justify-between items-center">
                   <h3 className="font-semibold text-gray-900">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllAsRead}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    disabled={unreadCount === 0}
+                    className={`text-xs font-medium ${unreadCount > 0
+                      ? "text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      : "text-gray-400 cursor-not-allowed"
+                      }`}
+                  >
+                    Mark all as read
+                  </button>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {notifications.length === 0 ? (

@@ -304,8 +304,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               onMouseEnter={() => setIsHovering(item.id)}
               onMouseLeave={() => setIsHovering(null)}
               className={`w-full flex items-center px-4 py-3.5 mb-1 rounded-xl text-sm font-medium transition-all duration-300 ${normalizedActiveView === item.id
-                  ? "bg-gray-900/5 text-gray-900 border-r-2 border-gray-900"
-                  : "text-gray-600/90 hover:bg-gray-100/50"
+                ? "bg-gray-900/5 text-gray-900 border-r-2 border-gray-900"
+                : "text-gray-600/90 hover:bg-gray-100/50"
                 }`}
               style={{
                 transform:
@@ -334,8 +334,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               setSidebarOpen(false);
             }}
             className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors mb-2 ${activeView === "profile"
-                ? "bg-gray-900/5 text-gray-900"
-                : "text-gray-600/90 hover:bg-gray-100/50"
+              ? "bg-gray-900/5 text-gray-900"
+              : "text-gray-600/90 hover:bg-gray-100/50"
               }`}
           >
             {/* Avatar initial + name (clickable) */}

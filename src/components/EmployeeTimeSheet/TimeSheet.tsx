@@ -178,7 +178,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
       if (filteredIncoming && filteredIncoming.length > 0) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filteredIncoming));
       }
-    } catch {}
+    } catch { }
 
     if (isFiltering) {
       setIsFiltering(false);
@@ -211,7 +211,7 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
       if (displayedEntries && displayedEntries.length > 0) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(displayedEntries));
       }
-    } catch {}
+    } catch { }
   }, [displayedEntries]);
 
   useEffect(() => {
@@ -380,9 +380,8 @@ const TimesheetsView: React.FC<TimesheetsViewProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full ${
-                          entry.approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                        }`}
+                        className={`px-3 py-1 text-xs font-medium rounded-full ${entry.approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          }`}
                       >
                         {entry.approved ? "Approved" : "Pending"}
                       </span>

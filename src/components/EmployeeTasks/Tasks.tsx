@@ -399,7 +399,7 @@ const TasksView: React.FC<TasksViewProps> = ({
                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap"><span className="px-2 py-0.5 text-xs font-semibold rounded-full capitalize ">{subtask.priority}</span></td>
                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 capitalize">{subtask.status.replace("_", " ")}</td>
                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500">-</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">{(subtask.assignees || []).map((assignee: any) => typeof assignee === "object" ? assignee.name : assignee).join(", ") || "-"}</td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">-</td>
                       </tr>
                     ))}
                   </React.Fragment>
