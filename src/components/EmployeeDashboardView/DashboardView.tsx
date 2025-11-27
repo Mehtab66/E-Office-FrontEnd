@@ -1,10 +1,13 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useSocket } from "../../context/SocketContext";
+import { toast } from "react-toastify";
 import {
   FiBriefcase,
   FiClock,
   FiBarChart2,
   FiUser,
   FiPlus,
+  FiBell,
 } from "react-icons/fi";
 import type { Project } from "../../types/project";
 import type { TimeEntry } from "../../types/timeEntry";
@@ -28,12 +31,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   setActiveView,
   onAddTime,
 }) => {
+  const { socket } = useSocket();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   useEffect(() => {
     console.log("DashboardView rendered");
     console.log("Projects in the Dashboard View:", projects);
     console.log("Tasks in the Dashboard View:", tasks);
     console.log("Time Entries in the Dashboard View:", timeEntries);
   }, [projects, tasks, timeEntries]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("new_task", (data: any) => {
+        console.log("New task notification received:", data);
+        toast.info(data.message);
+        setNotifications((prev) => [data, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      });
+
+      return () => {
+        socket.off("new_task");
+      };
+    }
+  }, [socket]);
 
   const totalHours = timeEntries.reduce(
     (total, entry) => total + entry.hours,
@@ -61,12 +84,46 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="text-gray-600">Welcome back, {employee.name}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={onAddTime}
-            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md"
-          >
-            <FiPlus className="mr-2" /> Add Time
-          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-gray-400 hover:text-indigo-600 transition-colors relative"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                if (!showNotifications) setUnreadCount(0);
+              }}
+            >
+              <FiBell className="text-xl" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-xs text-white flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-96 overflow-y-auto">
+                <div className="p-3 border-b border-gray-100">
+                  <h3 className="font-semibold text-gray-900">Notifications</h3>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((notif, index) => (
+                      <div key={index} className="p-3 hover:bg-gray-50 transition-colors">
+                        <p className="text-sm text-gray-800">{notif.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date().toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -161,21 +218,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 <div className="flex items-center">
                   <div
-                    className={`p-2 rounded-lg mr-4 ${
-                      project.status === "active"
-                        ? "bg-green-100"
-                        : project.status === "pending"
+                    className={`p-2 rounded-lg mr-4 ${project.status === "active"
+                      ? "bg-green-100"
+                      : project.status === "pending"
                         ? "bg-amber-100"
                         : "bg-gray-100"
-                    }`}
+                      }`}
                   >
                     <FiBriefcase
                       className={
                         project.status === "active"
                           ? "text-green-600"
                           : project.status === "pending"
-                          ? "text-amber-600"
-                          : "text-gray-600"
+                            ? "text-amber-600"
+                            : "text-gray-600"
                       }
                     />
                   </div>
@@ -192,13 +248,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <div className="flex items-center">
                   <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      project.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : project.status === "pending"
+                    className={`px-3 py-1 text-xs font-medium rounded-full ${project.status === "active"
+                      ? "bg-green-100 text-green-800"
+                      : project.status === "pending"
                         ? "bg-amber-100 text-amber-800"
                         : "bg-gray-100 text-gray-800"
-                    }`}
+                      }`}
                   >
                     {project.status.charAt(0).toUpperCase() +
                       project.status.slice(1)}
