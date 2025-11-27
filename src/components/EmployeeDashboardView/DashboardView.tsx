@@ -8,7 +8,10 @@ import {
   FiUser,
   FiPlus,
   FiBell,
+  FiMail,
 } from "react-icons/fi";
+import { FaEnvelopeOpen } from "react-icons/fa";
+import notificationService, { type Notification } from "../../services/notificationService";
 import type { Project } from "../../types/project";
 import type { TimeEntry } from "../../types/timeEntry";
 import type { Task } from "../../types/task";
@@ -32,9 +35,45 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onAddTime,
 }) => {
   const { socket } = useSocket();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await notificationService.getNotifications();
+      setNotifications(data);
+      setUnreadCount(data.filter((n) => !n.isRead).length);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
+  };
 
   useEffect(() => {
     console.log("DashboardView rendered");
@@ -48,8 +87,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       socket.on("new_task", (data: any) => {
         console.log("New task notification received:", data);
         toast.info(data.message);
-        setNotifications((prev) => [data, ...prev]);
-        setUnreadCount((prev) => prev + 1);
+        // Add the new notification to the list if it's included in the payload
+        if (data.notification) {
+          setNotifications((prev) => [data.notification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        } else {
+          // Fallback if notification object isn't sent (shouldn't happen with updated backend)
+          fetchNotifications();
+        }
       });
 
       return () => {
@@ -102,8 +147,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-96 overflow-y-auto">
-                <div className="p-3 border-b border-gray-100">
+                <div className="p-3 border-b border-gray-100 flex justify-between items-center">
                   <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
                 <div className="divide-y divide-gray-100">
                   {notifications.length === 0 ? (
@@ -111,12 +164,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       No notifications
                     </div>
                   ) : (
-                    notifications.map((notif, index) => (
-                      <div key={index} className="p-3 hover:bg-gray-50 transition-colors">
-                        <p className="text-sm text-gray-800">{notif.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date().toLocaleTimeString()}
-                        </p>
+                    notifications.map((notif) => (
+                      <div
+                        key={notif._id}
+                        className={`p-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.isRead ? "bg-indigo-50" : ""
+                          }`}
+                        onClick={() => {
+                          if (!notif.isRead) handleMarkAsRead(notif._id);
+                        }}
+                      >
+                        <div className="mt-1">
+                          {notif.isRead ? (
+                            <FaEnvelopeOpen className="text-gray-400" />
+                          ) : (
+                            <FiMail className="text-indigo-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p
+                            className={`text-sm ${!notif.isRead
+                              ? "font-semibold text-gray-900"
+                              : "text-gray-600"
+                              }`}
+                          >
+                            {notif.message}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(notif.createdAt).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
                     ))
                   )}
