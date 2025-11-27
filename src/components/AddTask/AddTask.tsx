@@ -196,38 +196,25 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-          {selectedProject ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Selected Project
-              </label>
-              <div className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 text-sm sm:text-base">
-                {selectedProject.name}
-              </div>
-              {/* Hidden input to ensure project ID is included in form data even when disabled */}
-              <input type="hidden" name="project" value={formData.project} />
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project
-              </label>
-              <select
-                name="project"
-                value={formData.project}
-                onChange={handleChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
-                required
-              >
-                <option value="">Select a project</option>
-                {projects.map((project) => (
-                  <option key={(project as any).id || project._id} value={(project as any).id || project._id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project
+            </label>
+            <select
+              name="project"
+              value={formData.project}
+              onChange={handleChange}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+              required
+            >
+              <option value="">Select a project</option>
+              {projects.map((project) => (
+                <option key={(project as any).id || project._id} value={(project as any).id || project._id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex items-center">
             <input
