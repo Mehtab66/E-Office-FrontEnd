@@ -167,13 +167,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     notifications.map((notif) => (
                       <div
                         key={notif._id}
-                        className={`p-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.isRead ? "bg-indigo-50" : ""
+                        className={`p-3 hover:bg-gray-50 transition-colors flex items-start gap-3 ${!notif.isRead ? "bg-indigo-50" : ""
                           }`}
-                        onClick={() => {
-                          if (!notif.isRead) handleMarkAsRead(notif._id);
-                        }}
                       >
-                        <div className="mt-1">
+                        <div className="mt-1 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={notif.isRead}
+                            onChange={(e) => {
+                              if (e.target.checked && !notif.isRead) {
+                                handleMarkAsRead(notif._id);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            disabled={notif.isRead}
+                          />
                           {notif.isRead ? (
                             <FaEnvelopeOpen className="text-gray-400" />
                           ) : (
@@ -183,8 +191,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         <div className="flex-1">
                           <p
                             className={`text-sm ${!notif.isRead
-                              ? "font-semibold text-gray-900"
-                              : "text-gray-600"
+                                ? "font-semibold text-gray-900"
+                                : "text-gray-600"
                               }`}
                           >
                             {notif.message}

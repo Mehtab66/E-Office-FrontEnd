@@ -11,17 +11,17 @@ export interface Notification {
 }
 
 const getNotifications = async (): Promise<Notification[]> => {
-    const response = await apiClient.get("/notifications");
+    const response = await apiClient.get("/api/notifications");
     return response.data;
 };
 
 const markAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.put(`/notifications/${id}/read`);
+    const response = await apiClient.put(`/api/notifications/${id}/read`);
     return response.data;
 };
 
 const markAllAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.put("/notifications/read-all");
+    const response = await apiClient.put("/api/notifications/read-all");
     return response.data;
 };
 
