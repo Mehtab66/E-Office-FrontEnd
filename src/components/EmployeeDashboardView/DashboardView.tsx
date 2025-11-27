@@ -191,8 +191,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         <div className="flex-1">
                           <p
                             className={`text-sm ${!notif.isRead
-                                ? "font-semibold text-gray-900"
-                                : "text-gray-600"
+                              ? "font-semibold text-gray-900"
+                              : "text-gray-600"
                               }`}
                           >
                             {notif.message}

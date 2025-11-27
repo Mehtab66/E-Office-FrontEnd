@@ -192,7 +192,7 @@ import {
   FiX,
   FiMenu,
   FiChevronRight,
-  
+
   FiLogOut,
 } from "react-icons/fi";
 import type { Employee } from "../../apis/authService";
@@ -261,9 +261,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile menu button */}
       <button
-        className={`fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/90 shadow-lg md:hidden transition-all duration-300 ${
-          sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-        }`}
+        className={`fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/90 shadow-lg md:hidden transition-all duration-300 ${sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
         onClick={() => setSidebarOpen(true)}
         style={{ backdropFilter: "blur(10px)" }}
       >
@@ -272,9 +271,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <div
-        className={`sidebar-container fixed inset-y-0 left-0 w-64 bg-white/95 shadow-2xl transform ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition-transform duration-500 ease-in-out z-50 flex flex-col border-r border-gray-200/70`}
+        className={`sidebar-container fixed inset-y-0 left-0 w-64 bg-white/95 shadow-2xl transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 transition-transform duration-500 ease-in-out z-50 flex flex-col border-r border-gray-200/70`}
         style={{ backdropFilter: "blur(10px)" }}
       >
         {/* Header section */}
@@ -291,7 +289,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-         
+
         </div>
 
         {/* Navigation items */}
@@ -305,20 +303,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               }}
               onMouseEnter={() => setIsHovering(item.id)}
               onMouseLeave={() => setIsHovering(null)}
-              className={`w-full flex items-center px-4 py-3.5 mb-1 rounded-xl text-sm font-medium transition-all duration-300 ${
-                normalizedActiveView === item.id
+              className={`w-full flex items-center px-4 py-3.5 mb-1 rounded-xl text-sm font-medium transition-all duration-300 ${normalizedActiveView === item.id
                   ? "bg-gray-900/5 text-gray-900 border-r-2 border-gray-900"
                   : "text-gray-600/90 hover:bg-gray-100/50"
-              }`}
+                }`}
               style={{
                 transform:
                   isHovering === item.id ? "translateX(4px)" : "translateX(0)",
               }}
             >
               <span
-                className={`mr-3 text-lg transition-colors ${
-                  normalizedActiveView === item.id ? "text-gray-900" : "text-gray-500"
-                }`}
+                className={`mr-3 text-lg transition-colors ${normalizedActiveView === item.id ? "text-gray-900" : "text-gray-500"
+                  }`}
               >
                 {item.icon}
               </span>
@@ -332,16 +328,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer section */}
         <div className="p-4 border-t border-gray-200/50">
-          <button 
+          <button
             onClick={() => {
               setActiveView("profile");
               setSidebarOpen(false);
             }}
-            className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors mb-2 ${
-              activeView === "profile"
+            className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors mb-2 ${activeView === "profile"
                 ? "bg-gray-900/5 text-gray-900"
                 : "text-gray-600/90 hover:bg-gray-100/50"
-            }`}
+              }`}
           >
             {/* Avatar initial + name (clickable) */}
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium mr-3">

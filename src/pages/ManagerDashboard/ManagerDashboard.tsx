@@ -1181,6 +1181,7 @@ const ManagerDashboard: React.FC = () => {
 
   const clients = clientsData as Client[];
   const employees = (employeesData?.users || []) as User[];
+
   const stats = statsData || {
     projects: 0,
     clients: 0,
@@ -1302,7 +1303,7 @@ const ManagerDashboard: React.FC = () => {
         type: "select",
         placeholder: "Select team lead",
         options: employees.map((employee) => ({
-          value: employee._id,
+          value: employee._id || (employee as any).id,
           label: employee.name,
         })),
         required: true,
@@ -1313,7 +1314,7 @@ const ManagerDashboard: React.FC = () => {
         type: "select",
         placeholder: "Select team members",
         options: employees.map((employee) => ({
-          value: employee._1,
+          value: employee._id || (employee as any).id,
           label: employee.name,
         })),
         multiple: true,
@@ -1564,11 +1565,11 @@ const ManagerDashboard: React.FC = () => {
         fields:
           initialData && initialData._id
             ? employeeConfig.fields
-                .filter((f) => f.name !== "password")
-                .map((f) => ({
-                  ...f,
-                  required: f.name === "password" ? false : f.required,
-                }))
+              .filter((f) => f.name !== "password")
+              .map((f) => ({
+                ...f,
+                required: f.name === "password" ? false : f.required,
+              }))
             : employeeConfig.fields,
         onSubmit: (data: any) => {
           if (initialData && initialData._id) {
@@ -1935,13 +1936,13 @@ const ManagerDashboard: React.FC = () => {
             </button>
           </div>
 
-          {/* right side: place bell icon on the right of the navbar */}
+          {/* right side: place bell icon on the right of the navbar 
           <div className="right-controls flex items-center">
             <div className="notifications">
               <FiBell />
               <span className="notification-badge">3</span>
             </div>
-          </div>
+          </div>*/}
         </div>
 
         <div className="content-area">{renderMainContent()}</div>
