@@ -81,6 +81,12 @@
 //     });
 //   }, [allProjects, employee]);
 
+//   const handleClearFilters = () => {
+//     setProjectFilter("");
+//     setPriorityFilter("");
+//     setStatusFilter("");
+//   };
+
 //   return (
 //     <div className="space-y-6 p-4 md:p-6">
 //       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -89,39 +95,8 @@
 //           <p className="text-gray-600 text-sm sm:text-base">Manage your assigned tasks and subtasks</p>
 //         </div>
 
-//         {/* Filters + Add Task controls */}
+//         {/* Only Add Task remains in header (filters moved below to match Timesheets) */}
 //         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
-//           {/* Project filter (existing) */}
-//           <select
-//             value={String(projectFilter || "")}
-//             onChange={(e) => setProjectFilter(e.target.value)}
-//             className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm"
-//           >
-//             <option value="">All Projects</option>
-//             {allProjects.map((project) => (
-//               <option key={project._id || project.id} value={String(project._id || project.id)}>
-//                 {project.name}
-//               </option>
-//             ))}
-//           </select>
-
-//           {/* Priority and status filters (existing) */}
-//           <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm">
-//             <option value="">All Priorities</option>
-//             <option value="urgent">Urgent</option>
-//             <option value="high">High</option>
-//             <option value="medium">Medium</option>
-//             <option value="low">Low</option>
-//           </select>
-
-//           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm">
-//             <option value="">All Statuses</option>
-//             <option value="todo">To Do</option>
-//             <option value="in_progress">In Progress</option>
-//             <option value="done">Done</option>
-//           </select>
-
-//           {/* Add Task button now opens modal without a preselected project */}
 //           <div className="flex items-center gap-2">
 //             <button
 //               onClick={() => {
@@ -136,55 +111,114 @@
 //         </div>
 //       </div>
 
-//       {/* Task table (unchanged except using normalized project lookup) */}
-//       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-//         <table className="w-full min-w-[640px]">
-//           <thead className="bg-gray-50">
-//             <tr>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-//               <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee(s)</th>
-//             </tr>
-//           </thead>
-//           <tbody className="bg-white divide-y divide-gray-200">
-//             {tasks.length > 0 ? (
-//               tasks.map((task) => (
-//                 <React.Fragment key={task._id || task.id}>
-//                   <tr className="hover:bg-gray-50 text-sm">
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">{task.title}</td>
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{getProjectName(task.project)}</td>
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-//                       <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${task.priority === "urgent" ? "bg-red-100 text-red-800" : task.priority === "high" ? "bg-orange-100 text-orange-800" : task.priority === "medium" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>
-//                         {task.priority}
-//                       </span>
-//                     </td>
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600 capitalize">{task.status.replace("_", " ")}</td>
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
-//                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{typeof task.assignedTo === "object" && task.assignedTo !== null ? task.assignedTo.name : task.assignedTo || "-"}</td>
-//                   </tr>
+//       {/* Filters moved into a bar above the table (same position/structure as TimesheetsView) */}
+//       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+//         <div className="p-5 border-b border-gray-100 flex flex-wrap items-center gap-3">
+//           <div className="flex items-center">
+//             <span className="text-sm text-gray-600 mr-2">Project:</span>
+//             <select
+//               value={String(projectFilter || "")}
+//               onChange={(e) => setProjectFilter(e.target.value)}
+//               className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+//             >
+//               <option value="">All Projects</option>
+//               {allProjects.map((project) => (
+//                 <option key={project._id || project.id} value={String(project._id || project.id)}>
+//                   {project.name}
+//                 </option>
+//               ))}
+//             </select>
+//           </div>
 
-//                   {task.subtasks?.map((subtask: any) => (
-//                     <tr key={subtask._id || subtask.id} className="bg-gray-50/60 hover:bg-gray-100/60 text-sm">
-//                       <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-gray-700">↳ {subtask.title}</td>
-//                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 italic">{getProjectName(task.project)}</td>
-//                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap"><span className="px-2 py-0.5 text-xs font-semibold rounded-full capitalize ">{subtask.priority}</span></td>
-//                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 capitalize">{subtask.status.replace("_", " ")}</td>
-//                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500">-</td>
-//                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">{(subtask.assignees || []).map((assignee: any) => typeof assignee === "object" ? assignee.name : assignee).join(", ") || "-"}</td>
-//                     </tr>
-//                   ))}
-//                 </React.Fragment>
-//               ))
-//             ) : (
+//           <div className="flex items-center">
+//             <span className="text-sm text-gray-600 mr-2">Priority:</span>
+//             <select
+//               value={priorityFilter}
+//               onChange={(e) => setPriorityFilter(e.target.value)}
+//               className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+//             >
+//               <option value="">All Priorities</option>
+//               <option value="urgent">Urgent</option>
+//               <option value="high">High</option>
+//               <option value="medium">Medium</option>
+//               <option value="low">Low</option>
+//             </select>
+//           </div>
+
+//           <div className="flex items-center">
+//             <span className="text-sm text-gray-600 mr-2">Status:</span>
+//             <select
+//               value={statusFilter}
+//               onChange={(e) => setStatusFilter(e.target.value)}
+//               className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+//             >
+//               <option value="">All Statuses</option>
+//               <option value="todo">To Do</option>
+//               <option value="in_progress">In Progress</option>
+//               <option value="done">Done</option>
+//             </select>
+//           </div>
+
+//           <div className="ml-auto">
+//             <button
+//               onClick={handleClearFilters}
+//               className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
+//             >
+//               Clear filters
+//             </button>
+//           </div>
+//         </div>
+
+//         {/* Task table (unchanged except using normalized project lookup) */}
+//         <div className="overflow-x-auto">
+//           <table className="w-full min-w-[640px]">
+//             <thead className="bg-gray-50">
 //               <tr>
-//                 <td colSpan={6} className="text-center p-6 text-gray-500">No tasks match the current filters.</td>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+//                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee(s)</th>
 //               </tr>
-//             )}
-//           </tbody>
-//         </table>
+//             </thead>
+//             <tbody className="bg-white divide-y divide-gray-200">
+//               {tasks.length > 0 ? (
+//                 tasks.map((task) => (
+//                   <React.Fragment key={task._id || task.id}>
+//                     <tr className="hover:bg-gray-50 text-sm">
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">{task.title}</td>
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{getProjectName(task.project)}</td>
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+//                         <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${task.priority === "urgent" ? "bg-red-100 text-red-800" : task.priority === "high" ? "bg-orange-100 text-orange-800" : task.priority === "medium" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>
+//                           {task.priority}
+//                         </span>
+//                       </td>
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600 capitalize">{task.status.replace("_", " ")}</td>
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
+//                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{typeof task.assignedTo === "object" && task.assignedTo !== null ? task.assignedTo.name : task.assignedTo || "-"}</td>
+//                     </tr>
+
+//                     {task.subtasks?.map((subtask: any) => (
+//                       <tr key={subtask._id || subtask.id} className="bg-gray-50/60 hover:bg-gray-100/60 text-sm">
+//                         <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-gray-700">↳ {subtask.title}</td>
+//                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 italic">{getProjectName(task.project)}</td>
+//                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap"><span className="px-2 py-0.5 text-xs font-semibold rounded-full capitalize ">{subtask.priority}</span></td>
+//                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 capitalize">{subtask.status.replace("_", " ")}</td>
+//                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500">-</td>
+//                         <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">-</td>
+//                       </tr>
+//                     ))}
+//                   </React.Fragment>
+//                 ))
+//               ) : (
+//                 <tr>
+//                   <td colSpan={6} className="text-center p-6 text-gray-500">No tasks match the current filters.</td>
+//                 </tr>
+//               )}
+//             </tbody>
+//           </table>
+//         </div>
 //       </div>
 //     </div>
 //   );
@@ -207,7 +241,6 @@ interface TasksViewProps {
   setPriorityFilter: (value: string) => void;
   setStatusFilter: (value: string) => void;
   setProjectFilter: (value: string) => void;
-  // onAddTask now accepts a Project or null -> null means "open modal with no preselected project"
   onAddTask: (project: Project | null) => void;
 }
 
@@ -223,7 +256,6 @@ const TasksView: React.FC<TasksViewProps> = ({
   setProjectFilter,
   onAddTask,
 }) => {
-  // Normalize projects input into a clean array of Project-like objects
   const allProjects = useMemo(() => {
     let arr: any[] = [];
     if (!projects) return [];
@@ -255,9 +287,6 @@ const TasksView: React.FC<TasksViewProps> = ({
     return Array.from(map.values()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
   }, [projects]);
 
-  // NOTE: removed outside selectedProjectId dropdown. Add-task project selection should be inside modal.
-
-  // Helper to get project name for display in table
   const getProjectName = (projectIdentifier: any): string => {
     if (!projectIdentifier) return "-";
     if (typeof projectIdentifier === "object" && projectIdentifier.name) return projectIdentifier.name;
@@ -281,22 +310,21 @@ const TasksView: React.FC<TasksViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    // THEME CONTAINER
+    <div className="space-y-6 p-4 md:p-6 container">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Manage your assigned tasks and subtasks</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">My Tasks</h1>
+          <p className="text-slate-400 text-sm sm:text-base">Manage your assigned tasks and subtasks</p>
         </div>
 
-        {/* Only Add Task remains in header (filters moved below to match Timesheets) */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                // pass null -> modal should show project dropdown inside itself
                 onAddTask(null);
               }}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md text-sm"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all flex items-center shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)] border border-blue-500/50 text-sm"
             >
               <FiPlus className="mr-1 sm:mr-2" /> Add Task
             </button>
@@ -304,15 +332,14 @@ const TasksView: React.FC<TasksViewProps> = ({
         </div>
       </div>
 
-      {/* Filters moved into a bar above the table (same position/structure as TimesheetsView) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-        <div className="p-5 border-b border-gray-100 flex flex-wrap items-center gap-3">
+      <div className="bg-slate-900/80 rounded-xl shadow-xl border border-slate-800 overflow-hidden relative backdrop-blur-sm">
+        <div className="p-5 border-b border-slate-800 flex flex-wrap items-center gap-3 bg-slate-950/30">
           <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">Project:</span>
+            <span className="text-sm text-slate-400 mr-2">Project:</span>
             <select
               value={String(projectFilter || "")}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+              className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
             >
               <option value="">All Projects</option>
               {allProjects.map((project) => (
@@ -324,11 +351,11 @@ const TasksView: React.FC<TasksViewProps> = ({
           </div>
 
           <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">Priority:</span>
+            <span className="text-sm text-slate-400 mr-2">Priority:</span>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+              className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
             >
               <option value="">All Priorities</option>
               <option value="urgent">Urgent</option>
@@ -339,11 +366,11 @@ const TasksView: React.FC<TasksViewProps> = ({
           </div>
 
           <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">Status:</span>
+            <span className="text-sm text-slate-400 mr-2">Status:</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 text-sm"
+              className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
             >
               <option value="">All Statuses</option>
               <option value="todo">To Do</option>
@@ -355,58 +382,57 @@ const TasksView: React.FC<TasksViewProps> = ({
           <div className="ml-auto">
             <button
               onClick={handleClearFilters}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
+              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
             >
               Clear filters
             </button>
           </div>
         </div>
 
-        {/* Task table (unchanged except using normalized project lookup) */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[640px] text-left text-sm text-slate-300">
+            <thead className="bg-slate-950/50 border-b border-slate-800">
               <tr>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee(s)</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Task</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Project</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Priority</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Due Date</th>
+                <th className="px-4 sm:px-6 py-4 font-semibold text-slate-400 uppercase tracking-wider">Assignee(s)</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-800">
               {tasks.length > 0 ? (
                 tasks.map((task) => (
                   <React.Fragment key={task._id || task.id}>
-                    <tr className="hover:bg-gray-50 text-sm">
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">{task.title}</td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{getProjectName(task.project)}</td>
+                    <tr className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap font-medium text-white">{task.title}</td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-slate-400">{getProjectName(task.project)}</td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${task.priority === "urgent" ? "bg-red-100 text-red-800" : task.priority === "high" ? "bg-orange-100 text-orange-800" : task.priority === "medium" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize border ${task.priority === "urgent" ? "bg-red-500/10 text-red-400 border-red-500/20" : task.priority === "high" ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : task.priority === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
                           {task.priority}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600 capitalize">{task.status.replace("_", " ")}</td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-gray-600">{typeof task.assignedTo === "object" && task.assignedTo !== null ? task.assignedTo.name : task.assignedTo || "-"}</td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-slate-400 capitalize">{task.status.replace("_", " ")}</td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-slate-400">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-slate-400">{typeof task.assignedTo === "object" && task.assignedTo !== null ? task.assignedTo.name : task.assignedTo || "-"}</td>
                     </tr>
 
                     {task.subtasks?.map((subtask: any) => (
-                      <tr key={subtask._id || subtask.id} className="bg-gray-50/60 hover:bg-gray-100/60 text-sm">
-                        <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-gray-700">↳ {subtask.title}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 italic">{getProjectName(task.project)}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap"><span className="px-2 py-0.5 text-xs font-semibold rounded-full capitalize ">{subtask.priority}</span></td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500 capitalize">{subtask.status.replace("_", " ")}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-500">-</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-gray-500">-</td>
+                      <tr key={subtask._id || subtask.id} className="bg-slate-950/20 hover:bg-slate-900/40 text-sm">
+                        <td className="pl-8 sm:pl-10 pr-4 sm:pr-6 py-3 whitespace-nowrap text-slate-300">↳ {subtask.title}</td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-slate-500 italic">{getProjectName(task.project)}</td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap"><span className="px-2 py-0.5 text-xs font-semibold rounded-full capitalize bg-slate-800 text-slate-400 border border-slate-700">{subtask.priority}</span></td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-slate-500 capitalize">{subtask.status.replace("_", " ")}</td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-slate-600">-</td>
+                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-xs text-slate-600">-</td>
                       </tr>
                     ))}
                   </React.Fragment>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center p-6 text-gray-500">No tasks match the current filters.</td>
+                  <td colSpan={6} className="text-center p-8 text-slate-500">No tasks match the current filters.</td>
                 </tr>
               )}
             </tbody>
