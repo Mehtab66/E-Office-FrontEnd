@@ -19,6 +19,8 @@ interface AddTimeEntryModalProps {
   }) => void;
   onClose: () => void;
   initialData?: TimeEntry;
+  initialProject?: Project | null;
+  isProjectDisabled?: boolean;
 }
 
 const AddTimeEntryModal: React.FC<AddTimeEntryModalProps> = ({
@@ -27,12 +29,15 @@ const AddTimeEntryModal: React.FC<AddTimeEntryModalProps> = ({
   onSubmit,
   onClose,
   initialData,
+  initialProject,
+  isProjectDisabled,
 }) => {
   const [formData, setFormData] = useState({
     // Removed 'id' - backend handles this
     project:
       (initialData?.project as any)?._id || // Handle populated or ID project
       (initialData?.project as string) ||
+      (initialProject?._id || (initialProject as any)?.id) ||
       "",
     date: initialData?.date
       ? new Date(initialData.date).toISOString().split("T")[0] // Format date correctly
@@ -126,7 +131,8 @@ const AddTimeEntryModal: React.FC<AddTimeEntryModalProps> = ({
               name="project"
               value={formData.project}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              disabled={isProjectDisabled}
+              className={`w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${isProjectDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
               required
             >
               <option value="">Select a project</option>

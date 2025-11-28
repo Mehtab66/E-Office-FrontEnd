@@ -359,6 +359,7 @@ const EmployeeDashboard: React.FC = () => {
           onSubmit={handleAddTask}
           onClose={() => { setShowAddTaskModal(false); setSelectedProjectForTask(null); }}
           tasks={tasks} // Pass tasks for parent task selection if adding subtask
+          isProjectDisabled={!!selectedProjectForTask}
         />
       )}
       {showAddDeliverableModal && (

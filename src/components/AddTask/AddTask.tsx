@@ -24,6 +24,7 @@ interface AddTaskModalProps {
   onClose: () => void;
   tasks?: Task[];
   onChangeProject?: (projectId: string) => void;
+  isProjectDisabled?: boolean;
 }
 
 const AddTaskModal: React.FC<AddTaskModalProps> = ({
@@ -35,6 +36,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   onClose,
   tasks = [],
   onChangeProject,
+  isProjectDisabled,
 }) => {
   const [formData, setFormData] = useState({
     project: editingTask
@@ -204,7 +206,8 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
               name="project"
               value={formData.project}
               onChange={handleChange}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+              disabled={isProjectDisabled || !!selectedProject}
+              className={`w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base ${(isProjectDisabled || !!selectedProject) ? "opacity-60 cursor-not-allowed" : ""}`}
               required
             >
               <option value="">Select a project</option>
