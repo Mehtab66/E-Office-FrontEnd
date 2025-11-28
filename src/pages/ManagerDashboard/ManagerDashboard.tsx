@@ -2077,8 +2077,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               {projects.slice(0, 3).map((project) => (
                 <div
                   key={project._id}
-                  className="list-item cursor-pointer hover:bg-muted/50"
-                  onClick={() => setActiveView("projects")}
+                  className="list-item"
                 >
                   <div className="item-info">
                     <h4>{project.name}</h4>
