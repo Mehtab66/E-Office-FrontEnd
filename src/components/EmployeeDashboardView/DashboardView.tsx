@@ -298,8 +298,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {projects.slice(0, 3).map((project) => (
               <div
                 key={project.id}
-                className="flex justify-between items-center p-5 hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => setActiveView(`project-${project.id}`)}
+                className="flex justify-between items-center p-5"
               >
                 <div className="flex items-center">
                   <div
