@@ -55,7 +55,7 @@
 // //               <FiPlus className="mr-2" /> Add Task
 // //             </button>
 // //           )}
-          
+
 // //         </div>
 // //       </div>
 // //       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -420,63 +420,63 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   // Prefetch timesheets for a project and store in sessionStorage so ProjectDetailsView can read them.
   // ProjectsView.tsx — replace the existing function with this exact code
-const prefetchTimesheetsForProject = async (projectId?: string | number) => {
-  if (!projectId) return;
-  const idStr = String(projectId);
-  const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:3000";
+  const prefetchTimesheetsForProject = async (projectId?: string | number) => {
+    if (!projectId) return;
+    const idStr = String(projectId);
+    const API_BASE = import.meta.env.VITE_BACKEND_API || "http://localhost:3000";
 
-  // Try several common storage keys for token
-  const token =
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    (() => {
-      const raw = localStorage.getItem("auth-storage");
-      if (!raw) return null;
-      try {
-        const parsed = JSON.parse(raw);
-        return parsed?.state?.token || parsed?.token || null;
-      } catch {
-        return null;
-      }
-    })() ||
-    null;
+    // Try several common storage keys for token
+    const token =
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("accessToken") ||
+      (() => {
+        const raw = localStorage.getItem("auth-storage");
+        if (!raw) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          return parsed?.state?.token || parsed?.token || null;
+        } catch {
+          return null;
+        }
+      })() ||
+      null;
 
-  // If you use cookie-based auth instead, you can omit Authorization and use credentials:'include'
-  if (!token) {
-    console.debug("No token found in localStorage — skipping prefetch");
-    return;
-  }
-
-  // NOTE: include the `/api` prefix because backend mounts routes under /api/projects
-  const url = `${API_BASE}/api/projects/${encodeURIComponent(idStr)}/time-entries`;
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      // uncomment if your auth uses cookies:
-      // credentials: "include",
-    });
-
-    if (!res.ok) {
-      console.debug(`Prefetch failed: ${url} (${res.status})`);
+    // If you use cookie-based auth instead, you can omit Authorization and use credentials:'include'
+    if (!token) {
+      console.debug("No token found in localStorage — skipping prefetch");
       return;
     }
 
-    const data = await res.json();
-    // backend returns an array for project-scoped route; handle both shapes
-    const entries = Array.isArray(data) ? data : Array.isArray(data.timeEntries) ? data.timeEntries : [];
-    if (entries.length) {
-      sessionStorage.setItem(`timesheets_${idStr}`, JSON.stringify(entries));
+    // NOTE: include the `/api` prefix because backend mounts routes under /api/projects
+    const url = `${API_BASE}/api/projects/${encodeURIComponent(idStr)}/time-entries`;
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        // uncomment if your auth uses cookies:
+        // credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.debug(`Prefetch failed: ${url} (${res.status})`);
+        return;
+      }
+
+      const data = await res.json();
+      // backend returns an array for project-scoped route; handle both shapes
+      const entries = Array.isArray(data) ? data : Array.isArray(data.timeEntries) ? data.timeEntries : [];
+      if (entries.length) {
+        sessionStorage.setItem(`timesheets_${idStr}`, JSON.stringify(entries));
+      }
+    } catch (err) {
+      console.debug("Prefetch error:", err);
     }
-  } catch (err) {
-    console.debug("Prefetch error:", err);
-  }
-};
+  };
 
 
   return (
@@ -494,13 +494,13 @@ const prefetchTimesheetsForProject = async (projectId?: string | number) => {
                 : p.teamLead?._id || p.teamLead?.id;
             return teamLeadId === employee.id;
           }) && (
-            <button
-              onClick={() => onAddTask()}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md"
-            >
-              <FiPlus className="mr-2" /> Add Task
-            </button>
-          )}
+              <button
+                onClick={() => onAddTask()}
+                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center shadow-md"
+              >
+                <FiPlus className="mr-2" /> Add Task
+              </button>
+            )}
         </div>
       </div>
 
@@ -520,36 +520,34 @@ const prefetchTimesheetsForProject = async (projectId?: string | number) => {
               <div className="p-5 border-b border-gray-100">
                 <div className="flex justify-between items-start mb-3">
                   <div
-                    className={`p-2 rounded-lg ${
-                      project.status === "active"
+                    className={`p-2 rounded-lg ${project.status === "active"
                         ? "bg-green-100"
                         : project.status === "pending"
-                        ? "bg-amber-100"
-                        : "bg-gray-100"
-                    }`}
+                          ? "bg-amber-100"
+                          : "bg-gray-100"
+                      }`}
                   >
                     <FiBriefcase
                       className={
                         project.status === "active"
                           ? "text-green-600"
                           : project.status === "pending"
-                          ? "text-amber-600"
-                          : "text-gray-600"
+                            ? "text-amber-600"
+                            : "text-gray-600"
                       }
                     />
                   </div>
                   <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      project.status === "active"
+                    className={`px-3 py-1 text-xs font-medium rounded-full ${project.status === "active"
                         ? "bg-green-100 text-green-800"
                         : project.status === "pending"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
                   >
                     {project.status &&
                       project.status.charAt(0).toUpperCase() +
-                        project.status.slice(1)}
+                      project.status.slice(1)}
                   </span>
                 </div>
                 <h3 className="font-semibold text-lg text-gray-900 mb-1">

@@ -242,11 +242,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
                       header.key !== "projects" &&
                       handleSort(header.key as keyof Client)
                     }
-                    className={`px-4 py-3 font-semibold text-muted-foreground ${
-                      header.key !== "projects"
+                    className={`px-4 py-3 font-semibold text-muted-foreground ${header.key !== "projects"
                         ? "cursor-pointer hover:text-foreground"
                         : ""
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center">
                       {header.label}
@@ -276,12 +275,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ clients, onEditClient }) => {
                     <td className="px-4 py-3">
                       {client.projects.length > 0
                         ? client.projects
-                            .map((project) =>
-                              typeof project === "string"
-                                ? project
-                                : project.name
-                            )
-                            .join(", ")
+                          .map((project) =>
+                            typeof project === "string"
+                              ? project
+                              : project.name
+                          )
+                          .join(", ")
                         : "None"}
                     </td>
                     <td className="px-4 py-3">

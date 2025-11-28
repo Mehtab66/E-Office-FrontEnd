@@ -295,9 +295,9 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
   // Map API users to local User type by adding 'id' property if missing
   const employees: User[] = data?.users
     ? data.users.map((user: any) => ({
-        ...user,
-        id: user.id ?? user._id, // Ensure 'id' exists
-      }))
+      ...user,
+      id: user.id ?? user._id, // Ensure 'id' exists
+    }))
     : propEmployees;
 
   const totalPages = data?.totalPages || 1;
@@ -343,24 +343,24 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
   };
 
   // Map project IDs to names
- const getProjectNames = (
-  projectIds: (string | { _id: string; name: string })[]
-) => {
-  if (!projectIds?.length) return "None";
-  return projectIds
-    .map((project) => {
-      if (typeof project === "string") {
-        const foundProject = projects.find((p) => p._id === project);
-        // Only return the project name if found; otherwise, skip invalid strings
-        return foundProject ? foundProject.name : null;
-      }
-      // Ensure it’s a valid project object with a name
-      return project?.name || null;
-    })
-    .filter(Boolean) // remove null/undefined entries
-    .join(", ") || "None";
-};
-  
+  const getProjectNames = (
+    projectIds: (string | { _id: string; name: string })[]
+  ) => {
+    if (!projectIds?.length) return "None";
+    return projectIds
+      .map((project) => {
+        if (typeof project === "string") {
+          const foundProject = projects.find((p) => p._id === project);
+          // Only return the project name if found; otherwise, skip invalid strings
+          return foundProject ? foundProject.name : null;
+        }
+        // Ensure it’s a valid project object with a name
+        return project?.name || null;
+      })
+      .filter(Boolean) // remove null/undefined entries
+      .join(", ") || "None";
+  };
+
 
   return (
     <div className="container px-4 py-6 bg-background">
@@ -404,11 +404,10 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
                           header.key !== "projects" &&
                           handleSort(header.key as keyof User)
                         }
-                        className={`px-4 py-3 font-semibold text-muted-foreground ${
-                          header.key !== "projects"
+                        className={`px-4 py-3 font-semibold text-muted-foreground ${header.key !== "projects"
                             ? "cursor-pointer hover:text-foreground"
                             : ""
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center">
                           {header.label}
@@ -478,11 +477,10 @@ const EmployeesView: React.FC<EmployeesViewProps> = ({
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 border border-border rounded-lg ${
-                          currentPageFromData === page
+                        className={`px-3 py-2 border border-border rounded-lg ${currentPageFromData === page
                             ? "bg-primary text-primary-foreground"
                             : "bg-card text-foreground"
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
