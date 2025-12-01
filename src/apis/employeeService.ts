@@ -34,11 +34,13 @@ export const getEmployees = async ({
   limit = 10,
   sort = "-createdAt",
   search = "",
+  role,
 }: {
   page?: number;
   limit?: number;
   sort?: string;
   search?: string;
+  role?: string;
 } = {}): Promise<{
   users: User[];
   total: number;
@@ -47,7 +49,7 @@ export const getEmployees = async ({
 }> => {
   try {
     const response = await apiClient.get("/admin/GetEmployees", {
-      params: { page, limit, sort, search },
+      params: { page, limit, sort, search, role },
     });
     return response.data;
   } catch (error: any) {

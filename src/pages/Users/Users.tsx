@@ -731,6 +731,7 @@
 //   );
 // }
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -768,7 +769,6 @@ import {
   UsersIcon,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Download,
   Briefcase,
 } from "lucide-react";
@@ -1015,6 +1015,11 @@ export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // New: role filter state (all / manager / employee)
+  const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "employee">(
+    "all"
+  );
+
   const {
     data = { users: [], total: 0, totalPages: 1, currentPage: 1 },
     isLoading,
@@ -1024,11 +1029,13 @@ export default function Users() {
     limit: itemsPerPage,
     sort: "-createdAt",
     search: debouncedSearchTerm,
+    // pass role to the hook (undefined if 'all') — your hook should use this to filter server-side
+    role: roleFilter === "all" ? undefined : roleFilter,
   });
 
   useEffect(() => {
-    console.log("useEmployees data:", data);
-  }, [data]);
+    console.log("useEmployees data:", data, "roleFilter:", roleFilter);
+  }, [data, roleFilter]);
 
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
@@ -1212,7 +1219,7 @@ export default function Users() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
               <Input
@@ -1225,21 +1232,29 @@ export default function Users() {
                 className="pl-10 bg-slate-950 border-slate-700 text-slate-200 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
               />
             </div>
-            <Button
-              variant="outline"
-              className="gap-2 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+
+            {/* Replaced old Filter + Export buttons with a single Role filter */}
+            <div className="w-48">
+              <Label className="text-slate-300 mb-1">Role</Label>
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => {
+                  setRoleFilter(value as "all" | "manager" | "employee");
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="bg-slate-950 border-slate-700 text-slate-200">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="employee">Employee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           {data.users.length === 0 ? (
             <div className="text-center py-12 border border-slate-800 rounded-lg bg-slate-950/30">
               <UsersIcon className="h-12 w-12 text-slate-600 mx-auto mb-4" />
@@ -1316,11 +1331,11 @@ export default function Users() {
                           <td className="px-6 py-4">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getGradeBadgeVariant(user.grade) === "default"
-                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                                  : getGradeBadgeVariant(user.grade) ===
-                                    "secondary"
-                                    ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                : getGradeBadgeVariant(user.grade) ===
+                                  "secondary"
+                                  ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                  : "bg-slate-800 text-slate-400 border-slate-700"
                                 }`}
                             >
                               Grade {user.grade}

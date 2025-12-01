@@ -18,11 +18,13 @@ export const useEmployees = ({
   limit = 10,
   sort = "-createdAt",
   search = "",
+  role,
 }: {
   page?: number;
   limit?: number;
   sort?: string;
   search?: string;
+  role?: string;
 } = {}) => {
   return useQuery<{
     users: User[];
@@ -30,8 +32,8 @@ export const useEmployees = ({
     totalPages: number;
     currentPage: number;
   }>({
-    queryKey: ["employees", { page, limit, sort, search }],
-    queryFn: () => getEmployees({ page, limit, sort, search }),
+    queryKey: ["employees", { page, limit, sort, search, role }],
+    queryFn: () => getEmployees({ page, limit, sort, search, role }),
   });
 };
 

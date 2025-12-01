@@ -390,7 +390,7 @@
 //                                 <p className="text-xs text-gray-500">
 //                                   {user.date}
 //                                 </p>
-
+// 
 //                               </div>
 //                             </div>
 //                           ))}
@@ -413,6 +413,7 @@
 // export default AdminDashboard;
 
 import { useState } from "react";
+
 import {
   LayoutDashboard,
   Users,
@@ -420,7 +421,6 @@ import {
   LogOut,
   Menu,
   Building2,
-  ChevronDown,
   Calendar,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -432,14 +432,6 @@ import {
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthLogout } from "../../hooks/useAuth";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropDownMenu";
-import {
   Card,
   CardContent,
   CardHeader,
@@ -448,11 +440,13 @@ import {
 } from "../../components/ui/card";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useEmployees, useDashboardStats } from "../../hooks/useEmployee"; // Import both hooks
+import { useAuthStore } from "../../store/authStore";
 
 function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { mutate: logout } = useAuthLogout();
+  const { user } = useAuthStore();
 
   // Fetch dashboard stats
   const {
@@ -499,18 +493,19 @@ function AdminDashboard() {
 
   // Recent registrations
   const recentRegistrations =
-    recentData?.users?.
-      map((user) => ({
+    recentData?.users
+      ?.map((user) => ({
         name: user.name,
         email: user.email,
         role: user.designation || "Unknown",
-        date: user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "Unknown",
+        date: user.createdAt
+          ? new Date(user.createdAt).toISOString().split("T")[0]
+          : "Unknown",
       })) || [];
 
   return (
     // 1. Theme Wrapper
     <div className="flex h-screen bg-[#0f172a] relative overflow-hidden text-slate-200">
-
       {/* 2. Background Effects */}
       <div className="absolute inset-0 bg-slate-950 z-0" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] bg-blue-900/10 rounded-[100%] blur-[100px] pointer-events-none z-0" />
@@ -575,15 +570,15 @@ function AdminDashboard() {
               <Avatar className="h-9 w-9 ring-2 ring-slate-700">
                 <AvatarImage src="/" alt="Admin" />
                 <AvatarFallback className="bg-slate-700 text-blue-400 font-bold">
-                  AD
+                  {user?.name ? user.name.charAt(0).toUpperCase() : "A"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  Admin User
+                  {user?.name || "Admin User"}
                 </p>
                 <p className="text-xs text-slate-400 truncate">
-                  admin@eoffice.com
+                  {user?.email || "admin@eoffice.com"}
                 </p>
               </div>
             </div>
@@ -639,46 +634,18 @@ function AdminDashboard() {
               </span>
             </div>
 
-            {/* User dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="flex items-center gap-2 pl-1 pr-3 rounded-full hover:bg-slate-800"
-                >
-                  <Avatar className="h-8 w-8 ring-2 ring-slate-700">
-                    <AvatarImage src="/" alt="Admin" />
-                    <AvatarFallback className="bg-slate-700 text-blue-400">
-                      AD
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-slate-200">
-                    Admin
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-slate-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-slate-900 border-slate-700 text-slate-200" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium text-white">Admin User</p>
-                    <p className="text-xs text-slate-400">
-                      admin@eoffice.com
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-slate-800" />
-                <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-slate-800" />
-                <DropdownMenuItem onClick={handleLogout} className="focus:bg-slate-800 focus:text-red-400 text-red-400 cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Static user display (dropdown removed) */}
+            <div className="flex items-center gap-2 pl-1 pr-3 rounded-full hover:bg-slate-800">
+              <Avatar className="h-8 w-8 ring-2 ring-slate-700">
+                <AvatarImage src="/" alt="Admin" />
+                <AvatarFallback className="bg-slate-700 text-blue-400">
+                  AD
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-slate-200">
+                Admin
+              </span>
+            </div>
           </div>
         </header>
 
